@@ -1,6 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import logo from "@/assets/logo-moisson.png";
 
 const countries = [
@@ -11,6 +14,67 @@ const countries = [
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    country: "",
+    referralCode: searchParams.get("ref") || "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
+
+  const updateField = (field: string, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (form.password !== form.confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    if (!form.referralCode.trim()) {
+      toast.error("Le code de parrainage est obligatoire");
+      return;
+    }
+
+    // Verify referral code exists
+    const { data: referrer } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("referral_code", form.referralCode.trim().toUpperCase())
+      .maybeSingle();
+
+    if (!referrer) {
+      toast.error("Code de parrainage invalide");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await signUp(form.email, form.password, {
+      first_name: form.firstName,
+      last_name: form.lastName,
+      phone: form.phone,
+      country: form.country,
+      referred_by: referrer.id,
+    });
+    setLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Compte créé ! Vérifiez votre email.");
+      navigate("/connexion");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary/30 px-4 py-12">
@@ -25,51 +89,38 @@ const Register = () => {
         </div>
 
         <div className="card-elevated">
-          <form className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Nom</label>
-                <input
-                  type="text"
-                  placeholder="Votre nom"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all"
-                />
+                <input type="text" placeholder="Votre nom" required value={form.lastName} onChange={(e) => updateField("lastName", e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Prénom</label>
-                <input
-                  type="text"
-                  placeholder="Votre prénom"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all"
-                />
+                <input type="text" placeholder="Votre prénom" required value={form.firstName} onChange={(e) => updateField("firstName", e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Email</label>
-              <input
-                type="email"
-                placeholder="votre@email.com"
-                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all"
-              />
+              <input type="email" placeholder="votre@email.com" required value={form.email} onChange={(e) => updateField("email", e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Contact (téléphone)</label>
-              <input
-                type="tel"
-                placeholder="+225 XX XX XX XX XX"
-                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all"
-              />
+              <input type="tel" placeholder="+225 XX XX XX XX XX" value={form.phone} onChange={(e) => updateField("phone", e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Pays</label>
-              <select className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all">
+              <select required value={form.country} onChange={(e) => updateField("country", e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all">
                 <option value="">Sélectionner votre pays</option>
-                {countries.map((country) => (
-                  <option key={country} value={country}>{country}</option>
-                ))}
+                {countries.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 
@@ -77,30 +128,18 @@ const Register = () => {
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">
                 Code de Parrainage <span className="text-destructive">*</span>
               </label>
-              <input
-                type="text"
-                placeholder="Code de votre parrain"
-                required
-                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all"
-              />
-              <p className="text-xs text-muted-foreground mt-1 font-body">
-                Obligatoire — demandez-le à votre parrain
-              </p>
+              <input type="text" placeholder="MOI-XXXXXX" required value={form.referralCode} onChange={(e) => updateField("referralCode", e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
+              <p className="text-xs text-muted-foreground mt-1 font-body">Obligatoire — demandez-le à votre parrain</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Mot de passe</label>
               <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Créer un mot de passe"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all pr-12"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
+                <input type={showPassword ? "text" : "password"} placeholder="Créer un mot de passe" required value={form.password} onChange={(e) => updateField("password", e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all pr-12" />
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
@@ -108,23 +147,18 @@ const Register = () => {
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Confirmer le mot de passe</label>
-              <input
-                type="password"
-                placeholder="Confirmer le mot de passe"
-                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all"
-              />
+              <input type="password" placeholder="Confirmer le mot de passe" required value={form.confirmPassword} onChange={(e) => updateField("confirmPassword", e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
             </div>
 
-            <button type="submit" className="btn-gold w-full !text-base">
-              🌱 Créer mon compte Moissonneur
+            <button type="submit" disabled={loading} className="btn-gold w-full !text-base disabled:opacity-50">
+              {loading ? "Création..." : "🌱 Créer mon compte Moissonneur"}
             </button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6 font-body">
             Déjà Moissonneur ?{" "}
-            <Link to="/connexion" className="text-primary font-semibold hover:underline">
-              Se connecter
-            </Link>
+            <Link to="/connexion" className="text-primary font-semibold hover:underline">Se connecter</Link>
           </p>
         </div>
       </div>
