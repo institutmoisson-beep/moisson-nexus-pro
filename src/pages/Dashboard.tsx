@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet, Users, TrendingUp, Copy, Share2, LogOut } from "lucide-react";
+import { Wallet, Users, TrendingUp, Copy, Share2, LogOut, Shield } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo-moisson.png";
 
@@ -10,6 +10,7 @@ const Dashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -19,12 +20,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single()
-        .then(({ data }) => setProfile(data));
+      supabase.from("profiles").select("*").eq("user_id", user.id).single().then(({ data }) => setProfile(data));
+      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => setIsAdmin(!!data));
     }
   }, [user]);
 
@@ -67,6 +64,11 @@ const Dashboard = () => {
             <span className="font-heading text-lg font-bold text-foreground">Institut Moisson</span>
           </div>
           <div className="flex items-center gap-4">
+            {isAdmin && (
+              <button onClick={() => navigate("/admin")} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold font-body hover:opacity-90 transition-all">
+                <Shield className="w-4 h-4" /> Admin
+              </button>
+            )}
             <span className="text-sm text-muted-foreground font-body">
               {profile.first_name} {profile.last_name}
             </span>
