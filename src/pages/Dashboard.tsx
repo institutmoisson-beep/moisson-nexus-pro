@@ -20,12 +20,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single()
-        .then(({ data }) => setProfile(data));
+      supabase.from("profiles").select("*").eq("user_id", user.id).single().then(({ data }) => setProfile(data));
+      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => setIsAdmin(!!data));
     }
   }, [user]);
 
