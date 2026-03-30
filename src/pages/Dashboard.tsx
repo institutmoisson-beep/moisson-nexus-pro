@@ -64,6 +64,11 @@ const Dashboard = () => {
             <span className="font-heading text-lg font-bold text-foreground">Institut Moisson</span>
           </div>
           <div className="flex items-center gap-4">
+            {isAdmin && (
+              <button onClick={() => navigate("/admin")} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold font-body hover:opacity-90 transition-all">
+                <Shield className="w-4 h-4" /> Admin
+              </button>
+            )}
             <span className="text-sm text-muted-foreground font-body">
               {profile.first_name} {profile.last_name}
             </span>
