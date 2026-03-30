@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet, Users, TrendingUp, Copy, Share2, LogOut } from "lucide-react";
+import { Wallet, Users, TrendingUp, Copy, Share2, LogOut, Shield } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo-moisson.png";
 
