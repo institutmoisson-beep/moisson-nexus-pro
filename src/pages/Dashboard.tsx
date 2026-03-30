@@ -2,153 +2,103 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet, Users, TrendingUp, Copy, Share2, LogOut, Shield } from "lucide-react";
-import { toast } from "sonner";
-import logo from "@/assets/logo-moisson.png";
+import { Wallet, Users, TrendingUp, Package } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 
 const Dashboard = () => {
-  const { user, signOut, loading } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [stats, setStats] = useState({ network: 0, commissions: 0, orders: 0 });
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/connexion");
-    }
+    if (!loading && !user) navigate("/connexion");
   }, [user, loading, navigate]);
 
   useEffect(() => {
     if (user) {
       supabase.from("profiles").select("*").eq("user_id", user.id).single().then(({ data }) => setProfile(data));
-      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => setIsAdmin(!!data));
+      // Network count
+      supabase.from("profiles").select("id", { count: "exact", head: true }).then(({ count }) =>
+        setStats(s => ({ ...s, network: (count || 1) - 1 }))
+      );
+      // Commission total
+      supabase.from("transactions").select("amount").eq("user_id", user.id).eq("type", "commission").eq("status", "approved").then(({ data }) =>
+        setStats(s => ({ ...s, commissions: (data || []).reduce((sum, t) => sum + Number(t.amount), 0) }))
+      );
+      // Orders
+      supabase.from("pack_orders").select("id", { count: "exact", head: true }).eq("user_id", user.id).then(({ count }) =>
+        setStats(s => ({ ...s, orders: count || 0 }))
+      );
     }
   }, [user]);
 
   if (loading || !profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground font-body">Chargement...</div>
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground font-body">Chargement...</div></div>;
   }
 
-  const referralLink = `${window.location.origin}/inscription?ref=${profile.referral_code}`;
-
-  const copyCode = () => {
-    navigator.clipboard.writeText(profile.referral_code);
-    toast.success("Code copié !");
-  };
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(referralLink);
-    toast.success("Lien copié !");
-  };
-
-  const shareWhatsApp = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(`Rejoins Institut Moisson avec mon code : ${profile.referral_code}\n${referralLink}`)}`, "_blank");
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="Institut Moisson" className="w-8 h-8" width={32} height={32} />
-            <span className="font-heading text-lg font-bold text-foreground">Institut Moisson</span>
+    <DashboardLayout>
+      <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
+        Bonjour, {profile.first_name} 🌾
+      </h1>
+      <p className="text-muted-foreground font-body mb-8">
+        Profil de carrière : <span className="text-primary font-semibold capitalize">{profile.career_level.replace(/_/g, " ")}</span>
+        {!profile.is_mlm_active && (
+          <span className="ml-2 text-xs bg-accent/20 text-accent-foreground px-2 py-1 rounded-full">
+            MLM non activé — <button onClick={() => navigate("/packs")} className="underline">Achetez un pack</button>
+          </span>
+        )}
+      </p>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="card-elevated">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Wallet className="w-4 h-4 text-primary" /></div>
+            <span className="text-xs text-muted-foreground font-body">Portefeuille</span>
           </div>
-          <div className="flex items-center gap-4">
-            {isAdmin && (
-              <button onClick={() => navigate("/admin")} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold font-body hover:opacity-90 transition-all">
-                <Shield className="w-4 h-4" /> Admin
-              </button>
-            )}
-            <span className="text-sm text-muted-foreground font-body">
-              {profile.first_name} {profile.last_name}
-            </span>
-            <button onClick={handleSignOut} className="text-muted-foreground hover:text-foreground transition-colors">
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
+          <p className="text-xl font-heading font-bold text-foreground">{Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA</p>
         </div>
-      </header>
-
-      <main className="container mx-auto px-6 py-8">
-        <h1 className="text-3xl font-heading font-bold text-foreground mb-2">
-          Bonjour, {profile.first_name} 🌾
-        </h1>
-        <p className="text-muted-foreground font-body mb-8">
-          Profil de carrière : <span className="text-primary font-semibold capitalize">{profile.career_level.replace(/_/g, " ")}</span>
-          {!profile.is_mlm_active && (
-            <span className="ml-2 text-xs bg-accent/20 text-accent-foreground px-2 py-1 rounded-full">
-              MLM non activé — Achetez un pack
-            </span>
-          )}
-        </p>
-
-        {/* Stats Grid */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <div className="card-elevated">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-primary" />
-              </div>
-              <span className="text-sm text-muted-foreground font-body">Portefeuille</span>
-            </div>
-            <p className="text-2xl font-heading font-bold text-foreground">
-              {Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA
-            </p>
+        <div className="card-elevated">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-9 h-9 rounded-lg bg-harvest-green/10 flex items-center justify-center"><Users className="w-4 h-4 text-harvest-green" /></div>
+            <span className="text-xs text-muted-foreground font-body">Mon réseau</span>
           </div>
-
-          <div className="card-elevated">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-harvest-green/10 flex items-center justify-center">
-                <Users className="w-5 h-5 text-harvest-green" />
-              </div>
-              <span className="text-sm text-muted-foreground font-body">Mon réseau</span>
-            </div>
-            <p className="text-2xl font-heading font-bold text-foreground">—</p>
-          </div>
-
-          <div className="card-elevated">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-gold" />
-              </div>
-              <span className="text-sm text-muted-foreground font-body">Commissions totales</span>
-            </div>
-            <p className="text-2xl font-heading font-bold text-foreground">0 FCFA</p>
-          </div>
+          <p className="text-xl font-heading font-bold text-foreground">{stats.network}</p>
         </div>
-
-        {/* Referral Card */}
-        <div className="card-elevated mb-8">
-          <h2 className="text-xl font-heading font-semibold text-foreground mb-4">🌱 Votre Code Moissonneur</h2>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 px-4 py-3 rounded-lg bg-secondary font-mono text-lg text-foreground font-bold tracking-wider">
-              {profile.referral_code}
-            </div>
-            <button onClick={copyCode} className="p-3 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-              <Copy className="w-5 h-5" />
-            </button>
+        <div className="card-elevated">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-9 h-9 rounded-lg bg-gold/10 flex items-center justify-center"><TrendingUp className="w-4 h-4 text-gold" /></div>
+            <span className="text-xs text-muted-foreground font-body">Commissions</span>
           </div>
-          <div className="flex gap-3">
-            <button onClick={copyLink} className="flex-1 btn-hero !text-sm !py-2.5 !px-4">
-              <Copy className="w-4 h-4 mr-2" /> Copier le lien
-            </button>
-            <button onClick={shareWhatsApp} className="flex-1 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-all bg-harvest-green text-harvest-green-foreground hover:opacity-90">
-              <Share2 className="w-4 h-4 mr-2" /> WhatsApp
-            </button>
-          </div>
+          <p className="text-xl font-heading font-bold text-foreground">{stats.commissions.toLocaleString("fr-FR")} FCFA</p>
         </div>
-      </main>
-    </div>
+        <div className="card-elevated">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center"><Package className="w-4 h-4 text-primary" /></div>
+            <span className="text-xs text-muted-foreground font-body">Commandes</span>
+          </div>
+          <p className="text-xl font-heading font-bold text-foreground">{stats.orders}</p>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <button onClick={() => navigate("/portefeuille")} className="card-elevated text-left hover:shadow-lg transition-shadow">
+          <h3 className="font-heading font-semibold text-foreground mb-1">💰 Portefeuille</h3>
+          <p className="text-xs text-muted-foreground font-body">Recharger, retirer, historique</p>
+        </button>
+        <button onClick={() => navigate("/packs")} className="card-elevated text-left hover:shadow-lg transition-shadow">
+          <h3 className="font-heading font-semibold text-foreground mb-1">📦 Acheter un Pack</h3>
+          <p className="text-xs text-muted-foreground font-body">Activer votre MLM</p>
+        </button>
+        <button onClick={() => navigate("/reseau")} className="card-elevated text-left hover:shadow-lg transition-shadow">
+          <h3 className="font-heading font-semibold text-foreground mb-1">🌳 Mon Réseau</h3>
+          <p className="text-xs text-muted-foreground font-body">Arbre généalogique</p>
+        </button>
+      </div>
+    </DashboardLayout>
   );
 };
 
