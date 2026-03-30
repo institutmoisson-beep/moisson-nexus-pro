@@ -4,12 +4,17 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-import Index from "./pages/Index.tsx";
-import Login from "./pages/Login.tsx";
-import Register from "./pages/Register.tsx";
-import Dashboard from "./pages/Dashboard.tsx";
-import AdminDashboard from "./pages/AdminDashboard.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import Wallet from "./pages/Wallet";
+import Packs from "./pages/Packs";
+import Network from "./pages/Network";
+import Profile from "./pages/Profile";
+import Partners from "./pages/Partners";
+import AdminDashboard from "./pages/AdminDashboard";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +30,11 @@ const App = () => (
             <Route path="/connexion" element={<Login />} />
             <Route path="/inscription" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/portefeuille" element={<Wallet />} />
+            <Route path="/packs" element={<Packs />} />
+            <Route path="/reseau" element={<Network />} />
+            <Route path="/profil" element={<Profile />} />
+            <Route path="/partenaires" element={<Partners />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
