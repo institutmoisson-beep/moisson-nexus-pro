@@ -14,6 +14,7 @@ import Network from "./pages/Network";
 import Profile from "./pages/Profile";
 import Partners from "./pages/Partners";
 import AdminDashboard from "./pages/AdminDashboard";
+import MoissonneursPros from "./pages/MoissonneursPros";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/profil" element={<Profile />} />
             <Route path="/partenaires" element={<Partners />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/moissonneurs-pros" element={<MoissonneursPros />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

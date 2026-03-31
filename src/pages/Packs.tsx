@@ -2,47 +2,50 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, ShoppingCart, MapPin } from "lucide-react";
+import { Package, ShoppingCart, MapPin, Download, Search } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+import { generateGuaranteeContract } from "@/lib/generateContract";
 
 const PacksPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [packs, setPacks] = useState<any[]>([]);
+  const [sectors, setSectors] = useState<any[]>([]);
+  const [selectedSector, setSelectedSector] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedPack, setSelectedPack] = useState<any>(null);
-  const [deliveryForm, setDeliveryForm] = useState({
-    address: "", city: "", country: "", phone: "", street: "",
-  });
+  const [deliveryForm, setDeliveryForm] = useState({ address: "", city: "", country: "", phone: "", street: "" });
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !user) navigate("/connexion");
-  }, [user, loading]);
-
-  useEffect(() => {
-    if (user) loadData();
-  }, [user]);
+  useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
+  useEffect(() => { if (user) loadData(); }, [user]);
 
   const loadData = async () => {
-    const [profileRes, packsRes] = await Promise.all([
+    const [profileRes, packsRes, sectorsRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
       supabase.from("packs").select("*, partner_companies(*)").eq("is_active", true),
+      supabase.from("pack_sectors").select("*").eq("is_active", true),
     ]);
     setProfile(profileRes.data);
     setPacks(packsRes.data || []);
-    // Pre-fill delivery from profile
+    setSectors(sectorsRes.data || []);
     if (profileRes.data) {
       setDeliveryForm({
-        address: profileRes.data.address || "",
-        city: profileRes.data.city || "",
-        country: profileRes.data.country || "",
-        phone: profileRes.data.phone || "",
+        address: profileRes.data.address || "", city: profileRes.data.city || "",
+        country: profileRes.data.country || "", phone: profileRes.data.phone || "",
         street: profileRes.data.street || "",
       });
     }
   };
+
+  const filteredPacks = packs.filter(p => {
+    const matchSector = !selectedSector || p.sector_id === selectedSector;
+    const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchSector && matchSearch;
+  });
 
   const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,53 +56,37 @@ const PacksPage = () => {
     }
     setSubmitting(true);
 
-    // 1. Create order
     const { error: orderError } = await supabase.from("pack_orders").insert({
-      user_id: user!.id,
-      pack_id: selectedPack.id,
-      amount_paid: selectedPack.price,
-      delivery_address: deliveryForm.address,
-      delivery_city: deliveryForm.city,
-      delivery_country: deliveryForm.country,
-      delivery_phone: deliveryForm.phone,
+      user_id: user!.id, pack_id: selectedPack.id, amount_paid: selectedPack.price,
+      delivery_address: deliveryForm.address, delivery_city: deliveryForm.city,
+      delivery_country: deliveryForm.country, delivery_phone: deliveryForm.phone,
       delivery_street: deliveryForm.street,
     });
     if (orderError) { toast.error("Erreur commande: " + orderError.message); setSubmitting(false); return; }
 
-    // 2. Debit wallet
     const newBalance = Number(profile.wallet_balance) - Number(selectedPack.price);
     await supabase.from("profiles").update({
-      wallet_balance: newBalance,
-      is_mlm_active: true,
-      address: deliveryForm.address,
-      city: deliveryForm.city,
-      street: deliveryForm.street,
+      wallet_balance: newBalance, is_mlm_active: true,
+      address: deliveryForm.address, city: deliveryForm.city, street: deliveryForm.street,
     }).eq("user_id", user!.id);
 
-    // 3. Record transaction
     await supabase.from("transactions").insert({
-      user_id: user!.id,
-      amount: selectedPack.price,
-      type: "pack_purchase" as const,
-      status: "approved" as const,
-      description: `Achat pack: ${selectedPack.name}`,
+      user_id: user!.id, amount: selectedPack.price, type: "pack_purchase" as const,
+      status: "approved" as const, description: `Achat pack: ${selectedPack.name}`,
     });
 
-    // 4. Distribute commissions up the chain
     await distributeCommissions(user!.id, selectedPack.price, selectedPack.commission_percentage);
 
-    toast.success("Pack acheté avec succès ! Votre MLM est activé 🌾");
+    toast.success("Pack acheté avec succès ! 🌾");
     setSelectedPack(null);
     setSubmitting(false);
     loadData();
   };
 
   const distributeCommissions = async (buyerId: string, packPrice: number, baseCommission: number) => {
-    // Get commission levels
     const { data: levels } = await supabase.from("commission_levels").select("*").order("level_number");
     if (!levels || levels.length === 0) return;
 
-    // Walk up the referral chain
     let currentProfileRes = await supabase.from("profiles").select("referred_by, user_id").eq("user_id", buyerId).single();
     let currentProfile = currentProfileRes.data;
     let level = 0;
@@ -109,27 +96,22 @@ const PacksPage = () => {
       const sponsor = sponsorRes.data;
       if (!sponsor || !sponsor.is_mlm_active) break;
 
-      const commissionLevel = levels[level];
-      const commissionAmount = (packPrice * commissionLevel.percentage) / 100;
-
-      // Credit sponsor wallet
-      const newSponsorBalance = Number(sponsor.wallet_balance) + commissionAmount;
-      await supabase.from("profiles").update({ wallet_balance: newSponsorBalance }).eq("id", sponsor.id);
-
-      // Record commission transaction
+      const commissionAmount = (packPrice * levels[level].percentage) / 100;
+      await supabase.from("profiles").update({ wallet_balance: Number(sponsor.wallet_balance) + commissionAmount }).eq("id", sponsor.id);
       await supabase.from("transactions").insert({
-        user_id: sponsor.user_id,
-        amount: commissionAmount,
-        type: "commission" as const,
-        status: "approved" as const,
-        description: `Commission niveau ${level + 1} - Achat pack`,
+        user_id: sponsor.user_id, amount: commissionAmount, type: "commission" as const,
+        status: "approved" as const, description: `Commission niveau ${level + 1} - Achat pack`,
         metadata: { buyer_id: buyerId, level: level + 1, pack_price: packPrice },
       });
 
-      // Move up
       currentProfile = { referred_by: sponsor.referred_by, user_id: sponsor.user_id };
       level++;
     }
+  };
+
+  const handleDownloadContract = (pack: any) => {
+    const memberName = `${profile.first_name} ${profile.last_name}`;
+    generateGuaranteeContract(memberName, pack.name, Number(pack.price));
   };
 
   const getGeolocation = () => {
@@ -157,9 +139,23 @@ const PacksPage = () => {
         {profile.is_mlm_active && <span className="ml-2 text-xs bg-harvest-green/20 text-harvest-green px-2 py-1 rounded-full">MLM Actif ✓</span>}
       </p>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input placeholder="Rechercher un pack..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
+        </div>
+        <select value={selectedSector} onChange={e => setSelectedSector(e.target.value)}
+          className="px-3 py-2.5 rounded-lg border border-input bg-background text-foreground font-body text-sm">
+          <option value="">Tous les secteurs</option>
+          {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
+
       {/* Pack Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {packs.map(pack => (
+        {filteredPacks.map(pack => (
           <div key={pack.id} className="card-elevated flex flex-col">
             <div className="flex items-start justify-between mb-3">
               <div>
@@ -179,12 +175,18 @@ const PacksPage = () => {
               </div>
             )}
             <p className="text-xs text-muted-foreground font-body mb-4">Commission: {pack.commission_percentage}%</p>
-            <button onClick={() => setSelectedPack(pack)} className="mt-auto btn-gold !text-sm !py-2.5 w-full">
-              <ShoppingCart className="w-4 h-4 mr-2" /> Acheter ce pack
-            </button>
+            <div className="mt-auto space-y-2">
+              <button onClick={() => setSelectedPack(pack)} className="btn-gold !text-sm !py-2.5 w-full">
+                <ShoppingCart className="w-4 h-4 mr-2" /> Acheter ce pack
+              </button>
+              <button onClick={() => handleDownloadContract(pack)}
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-body text-muted-foreground hover:bg-secondary transition-colors">
+                <Download className="w-4 h-4" /> Contrat de garantie
+              </button>
+            </div>
           </div>
         ))}
-        {packs.length === 0 && <p className="text-muted-foreground font-body col-span-3 text-center py-12">Aucun pack disponible</p>}
+        {filteredPacks.length === 0 && <p className="text-muted-foreground font-body col-span-3 text-center py-12">Aucun pack trouvé</p>}
       </div>
 
       {/* Purchase Modal */}
