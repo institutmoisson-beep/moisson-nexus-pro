@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: "/packs", label: "Packs", icon: Package },
   { path: "/reseau", label: "Mon Réseau", icon: Users },
   { path: "/profil", label: "Profil", icon: User },
+  { path: "/moissonneurs-pros", label: "Pros", icon: UserCheck },
 ];
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
