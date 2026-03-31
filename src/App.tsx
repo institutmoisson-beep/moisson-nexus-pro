@@ -14,6 +14,7 @@ import Network from "./pages/Network";
 import Profile from "./pages/Profile";
 import Partners from "./pages/Partners";
 import AdminDashboard from "./pages/AdminDashboard";
+import MoissonneursPros from "./pages/MoissonneursPros";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
