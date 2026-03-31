@@ -139,6 +139,30 @@ export type Database = {
           },
         ]
       }
+      pack_sectors: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       packs: {
         Row: {
           commission_percentage: number
@@ -151,6 +175,7 @@ export type Database = {
           partner_company_id: string | null
           physical_prizes: string | null
           price: number
+          sector_id: string | null
           updated_at: string
         }
         Insert: {
@@ -164,6 +189,7 @@ export type Database = {
           partner_company_id?: string | null
           physical_prizes?: string | null
           price: number
+          sector_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -177,6 +203,7 @@ export type Database = {
           partner_company_id?: string | null
           physical_prizes?: string | null
           price?: number
+          sector_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -185,6 +212,13 @@ export type Database = {
             columns: ["partner_company_id"]
             isOneToOne: false
             referencedRelation: "partner_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "packs_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "pack_sectors"
             referencedColumns: ["id"]
           },
         ]
@@ -250,6 +284,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          payment_link: string | null
           type: string
         }
         Insert: {
@@ -258,6 +293,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          payment_link?: string | null
           type: string
         }
         Update: {
@@ -266,6 +302,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          payment_link?: string | null
           type?: string
         }
         Relationships: []
@@ -283,6 +320,7 @@ export type Database = {
           geolocation: Json | null
           id: string
           is_mlm_active: boolean
+          is_pro_visible: boolean
           is_suspended: boolean
           last_name: string
           phone: string | null
@@ -306,6 +344,7 @@ export type Database = {
           geolocation?: Json | null
           id?: string
           is_mlm_active?: boolean
+          is_pro_visible?: boolean
           is_suspended?: boolean
           last_name: string
           phone?: string | null
@@ -329,6 +368,7 @@ export type Database = {
           geolocation?: Json | null
           id?: string
           is_mlm_active?: boolean
+          is_pro_visible?: boolean
           is_suspended?: boolean
           last_name?: string
           phone?: string | null
