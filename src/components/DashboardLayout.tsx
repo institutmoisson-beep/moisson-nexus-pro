@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Wallet, Package, Users, User, Shield, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Wallet, Package, Users, User, Shield, LogOut, Menu, X, UserCheck } from "lucide-react";
 import logo from "@/assets/logo-moisson.png";
 
 const NAV_ITEMS = [
