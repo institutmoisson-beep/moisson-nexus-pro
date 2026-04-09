@@ -1,29 +1,73 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2, Package } from "lucide-react";
+import ImageUploader from "./ImageUploader";
 
 const AdminPartners = () => {
   const [partners, setPartners] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showProductForm, setShowProductForm] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", description: "", website: "", whatsapp: "", facebook: "", email: "", phone: "" });
+  const [logoImages, setLogoImages] = useState<string[]>([]);
+  const [bannerImages, setBannerImages] = useState<string[]>([]);
+  const [productForm, setProductForm] = useState({ name: "", description: "", price: "", allow_cod: false });
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const { data } = await supabase.from("partner_companies").select("*").order("created_at", { ascending: false });
-    setPartners(data || []);
+    const [partnersRes, productsRes] = await Promise.all([
+      supabase.from("partner_companies").select("*").order("created_at", { ascending: false }),
+      supabase.from("partner_products").select("*").order("created_at", { ascending: false }),
+    ]);
+    setPartners(partnersRes.data || []);
+    setProducts(productsRes.data || []);
   };
 
   const handleCreate = async () => {
     if (!form.name) { toast.error("Nom requis"); return; }
-    const { error } = await supabase.from("partner_companies").insert(form);
+    const { error } = await supabase.from("partner_companies").insert({
+      ...form,
+      logo_url: logoImages[0] || null,
+      image1_url: bannerImages[0] || null,
+      image2_url: bannerImages[1] || null,
+    });
     if (error) { toast.error("Erreur"); return; }
     toast.success("Partenaire ajouté !");
     setShowForm(false);
     setForm({ name: "", description: "", website: "", whatsapp: "", facebook: "", email: "", phone: "" });
+    setLogoImages([]);
+    setBannerImages([]);
     loadData();
   };
+
+  const handleCreateProduct = async () => {
+    if (!productForm.name || !productForm.price || !showProductForm) { toast.error("Nom et prix requis"); return; }
+    const { error } = await supabase.from("partner_products").insert({
+      partner_company_id: showProductForm,
+      name: productForm.name,
+      description: productForm.description,
+      price: Number(productForm.price),
+      allow_cod: productForm.allow_cod,
+      images: productImages,
+    });
+    if (error) { toast.error("Erreur: " + error.message); return; }
+    toast.success("Produit ajouté !");
+    setShowProductForm(null);
+    setProductForm({ name: "", description: "", price: "", allow_cod: false });
+    setProductImages([]);
+    loadData();
+  };
+
+  const deletePartner = async (id: string) => {
+    await supabase.from("partner_companies").update({ is_active: false }).eq("id", id);
+    toast.success("Partenaire désactivé");
+    loadData();
+  };
+
+  const getPartnerProducts = (partnerId: string) => products.filter(p => p.partner_company_id === partnerId);
 
   return (
     <div>
@@ -52,23 +96,89 @@ const AdminPartners = () => {
             <input placeholder="Téléphone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
               className="px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
           </div>
+          <ImageUploader folder="partners/logos" images={logoImages} onChange={setLogoImages} max={1} label="Logo" />
+          <ImageUploader folder="partners/banners" images={bannerImages} onChange={setBannerImages} max={2} label="Images de présentation" />
           <button onClick={handleCreate} className="btn-gold !text-sm !py-2">Ajouter</button>
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="space-y-4">
         {partners.map((p: any) => (
           <div key={p.id} className={`card-elevated ${!p.is_active ? "opacity-50" : ""}`}>
-            <h3 className="font-heading font-semibold text-foreground mb-1">{p.name}</h3>
-            {p.description && <p className="text-sm text-muted-foreground font-body mb-2">{p.description}</p>}
-            <div className="text-xs text-muted-foreground font-body space-y-0.5">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-3">
+                {p.logo_url ? (
+                  <img src={p.logo_url} alt={p.name} className="w-12 h-12 rounded-xl object-cover border border-border" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <span className="text-lg font-bold text-primary">{p.name.charAt(0)}</span>
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-heading font-semibold text-foreground">{p.name}</h3>
+                  {p.description && <p className="text-xs text-muted-foreground font-body line-clamp-1">{p.description}</p>}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                <button onClick={() => setShowProductForm(showProductForm === p.id ? null : p.id)}
+                  className="p-1.5 text-primary hover:bg-primary/10 rounded" title="Ajouter un produit">
+                  <Package className="w-4 h-4" />
+                </button>
+                <button onClick={() => deletePartner(p.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {(p.image1_url || p.image2_url) && (
+              <div className="flex gap-2 mb-3">
+                {p.image1_url && <img src={p.image1_url} alt="" className="w-24 h-16 rounded-lg object-cover border border-border" />}
+                {p.image2_url && <img src={p.image2_url} alt="" className="w-24 h-16 rounded-lg object-cover border border-border" />}
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground font-body space-y-0.5 mb-3">
               {p.website && <p>🌐 {p.website}</p>}
               {p.whatsapp && <p>💬 {p.whatsapp}</p>}
               {p.email && <p>📧 {p.email}</p>}
             </div>
+
+            {/* Add product form */}
+            {showProductForm === p.id && (
+              <div className="border border-border rounded-lg p-3 mb-3 space-y-2 bg-secondary/30">
+                <p className="text-xs font-semibold text-foreground font-body">Ajouter un produit</p>
+                <input placeholder="Nom du produit" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
+                <input placeholder="Prix (FCFA)" type="number" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
+                <textarea placeholder="Description" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" rows={2} />
+                <label className="flex items-center gap-2 text-sm font-body text-foreground">
+                  <input type="checkbox" checked={productForm.allow_cod} onChange={e => setProductForm({...productForm, allow_cod: e.target.checked})} />
+                  Paiement à la livraison autorisé
+                </label>
+                <ImageUploader folder="products" images={productImages} onChange={setProductImages} max={4} label="Images du produit" />
+                <button onClick={handleCreateProduct} className="btn-gold !text-xs !py-1.5">Ajouter le produit</button>
+              </div>
+            )}
+
+            {/* Existing products */}
+            {getPartnerProducts(p.id).length > 0 && (
+              <div className="border-t border-border pt-2">
+                <p className="text-xs font-semibold text-foreground font-body mb-1">Produits ({getPartnerProducts(p.id).length})</p>
+                {getPartnerProducts(p.id).map(prod => (
+                  <div key={prod.id} className="flex items-center gap-2 text-xs font-body py-1">
+                    {prod.images?.[0] && <img src={prod.images[0]} alt="" className="w-8 h-8 rounded object-cover" />}
+                    <span className="text-foreground flex-1">{prod.name}</span>
+                    <span className="text-primary font-semibold">{Number(prod.price).toLocaleString("fr-FR")} FCFA</span>
+                    {prod.allow_cod && <span className="text-xs bg-harvest-green/20 text-harvest-green px-1.5 py-0.5 rounded">COD</span>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
-        {partners.length === 0 && <p className="text-muted-foreground font-body col-span-2 text-center py-8">Aucun partenaire</p>}
+        {partners.length === 0 && <p className="text-muted-foreground font-body text-center py-8">Aucun partenaire</p>}
       </div>
     </div>
   );
