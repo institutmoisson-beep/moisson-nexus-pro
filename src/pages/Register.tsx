@@ -41,37 +41,45 @@ const Register = () => {
       return;
     }
 
-    if (!form.referralCode.trim()) {
-      toast.error("Le code de parrainage est obligatoire");
-      return;
-    }
+    let referrerId: string | null = null;
 
-    // Verify referral code exists
-    const { data: referrer } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("referral_code", form.referralCode.trim().toUpperCase())
-      .maybeSingle();
+    if (form.referralCode.trim()) {
+      const { data: referrer } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("referral_code", form.referralCode.trim().toUpperCase())
+        .maybeSingle();
 
-    if (!referrer) {
-      toast.error("Code de parrainage invalide");
-      return;
+      if (!referrer) {
+        toast.error("Code de parrainage invalide");
+        return;
+      }
+      referrerId = referrer.id;
+    } else {
+      // Check if any profiles exist - if yes, referral code is required
+      const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true });
+      if (count && count > 0) {
+        toast.error("Le code de parrainage est obligatoire");
+        return;
+      }
     }
 
     setLoading(true);
-    const { error } = await signUp(form.email, form.password, {
+    const metadata: Record<string, string> = {
       first_name: form.firstName,
       last_name: form.lastName,
       phone: form.phone,
       country: form.country,
-      referred_by: referrer.id,
-    });
+    };
+    if (referrerId) metadata.referred_by = referrerId;
+
+    const { error } = await signUp(form.email, form.password, metadata);
     setLoading(false);
 
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Compte créé ! Vérifiez votre email.");
+      toast.success("Compte créé avec succès ! Connectez-vous.");
       navigate("/connexion");
     }
   };
@@ -126,11 +134,11 @@ const Register = () => {
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">
-                Code de Parrainage <span className="text-destructive">*</span>
+                Code de Parrainage
               </label>
-              <input type="text" placeholder="MOI-XXXXXX" required value={form.referralCode} onChange={(e) => updateField("referralCode", e.target.value)}
+              <input type="text" placeholder="MOI-XXXXXX" value={form.referralCode} onChange={(e) => updateField("referralCode", e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
-              <p className="text-xs text-muted-foreground mt-1 font-body">Obligatoire — demandez-le à votre parrain</p>
+              <p className="text-xs text-muted-foreground mt-1 font-body">Demandez-le à votre parrain</p>
             </div>
 
             <div>
