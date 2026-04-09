@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
+import ImageUploader from "./ImageUploader";
 
 const AdminPacks = () => {
   const [packs, setPacks] = useState<any[]>([]);
@@ -12,6 +13,7 @@ const AdminPacks = () => {
     name: "", price: "", commission_percentage: "10", description: "",
     physical_prizes: "", partner_company_id: "", sector_id: "",
   });
+  const [packImages, setPackImages] = useState<string[]>([]);
 
   useEffect(() => { loadData(); }, []);
 
@@ -28,17 +30,20 @@ const AdminPacks = () => {
 
   const handleCreate = async () => {
     if (!form.name || !form.price) { toast.error("Nom et prix requis"); return; }
+    if (!form.sector_id) { toast.error("Veuillez sélectionner un secteur"); return; }
     const { error } = await supabase.from("packs").insert({
       name: form.name, price: Number(form.price),
       commission_percentage: Number(form.commission_percentage),
       description: form.description, physical_prizes: form.physical_prizes,
       partner_company_id: form.partner_company_id || null,
       sector_id: form.sector_id || null,
+      images: packImages,
     });
     if (error) { toast.error("Erreur: " + error.message); return; }
     toast.success("Pack créé !");
     setShowForm(false);
     setForm({ name: "", price: "", commission_percentage: "10", description: "", physical_prizes: "", partner_company_id: "", sector_id: "" });
+    setPackImages([]);
     loadData();
   };
 
@@ -74,7 +79,7 @@ const AdminPacks = () => {
           <div className="grid grid-cols-2 gap-3">
             <select value={form.sector_id} onChange={e => setForm({...form, sector_id: e.target.value})}
               className="px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm">
-              <option value="">Secteur (optionnel)</option>
+              <option value="">-- Secteur (requis) --</option>
               {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             <select value={form.partner_company_id} onChange={e => setForm({...form, partner_company_id: e.target.value})}
@@ -83,6 +88,7 @@ const AdminPacks = () => {
               {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
+          <ImageUploader folder="packs" images={packImages} onChange={setPackImages} max={6} label="Images du pack" />
           <button onClick={handleCreate} className="btn-gold !text-sm !py-2">Créer le pack</button>
         </div>
       )}
@@ -94,6 +100,13 @@ const AdminPacks = () => {
               <h3 className="font-heading font-semibold text-foreground">{p.name}</h3>
               <button onClick={() => deletePack(p.id)} className="p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="w-4 h-4" /></button>
             </div>
+            {p.images && p.images.length > 0 && (
+              <div className="flex gap-1.5 mb-2 overflow-x-auto">
+                {p.images.map((img: string, i: number) => (
+                  <img key={i} src={img} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0 border border-border" />
+                ))}
+              </div>
+            )}
             <p className="text-xl font-bold text-primary mb-1">{Number(p.price).toLocaleString("fr-FR")} FCFA</p>
             <p className="text-xs text-muted-foreground font-body">Commission: {p.commission_percentage}%</p>
             {p.description && <p className="text-sm text-muted-foreground font-body mt-2">{p.description}</p>}
