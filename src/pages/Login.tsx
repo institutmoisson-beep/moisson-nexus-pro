@@ -17,7 +17,25 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(email, password);
+
+    let loginEmail = email;
+
+    // If using referral code, look up the email
+    if (loginMethod === "code") {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("email")
+        .eq("referral_code", email.trim().toUpperCase())
+        .maybeSingle();
+      if (!profile) {
+        toast.error("Code Moissonneur introuvable");
+        setLoading(false);
+        return;
+      }
+      loginEmail = profile.email;
+    }
+
+    const { error } = await signIn(loginEmail, password);
     setLoading(false);
     if (error) {
       toast.error("Identifiants incorrects");
