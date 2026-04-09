@@ -277,6 +277,53 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_products: {
+        Row: {
+          allow_cod: boolean
+          created_at: string
+          description: string | null
+          id: string
+          images: string[] | null
+          is_active: boolean
+          name: string
+          partner_company_id: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          allow_cod?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean
+          name: string
+          partner_company_id: string
+          price?: number
+          updated_at?: string
+        }
+        Update: {
+          allow_cod?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: string[] | null
+          is_active?: boolean
+          name?: string
+          partner_company_id?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_products_partner_company_id_fkey"
+            columns: ["partner_company_id"]
+            isOneToOne: false
+            referencedRelation: "partner_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_methods: {
         Row: {
           created_at: string
