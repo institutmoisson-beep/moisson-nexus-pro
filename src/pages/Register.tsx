@@ -134,11 +134,11 @@ const Register = () => {
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">
-                Code de Parrainage <span className="text-destructive">*</span>
+                Code de Parrainage
               </label>
-              <input type="text" placeholder="MOI-XXXXXX" required value={form.referralCode} onChange={(e) => updateField("referralCode", e.target.value)}
+              <input type="text" placeholder="MOI-XXXXXX" value={form.referralCode} onChange={(e) => updateField("referralCode", e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
-              <p className="text-xs text-muted-foreground mt-1 font-body">Obligatoire — demandez-le à votre parrain</p>
+              <p className="text-xs text-muted-foreground mt-1 font-body">Demandez-le à votre parrain</p>
             </div>
 
             <div>
