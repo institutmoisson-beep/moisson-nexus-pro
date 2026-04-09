@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, ShoppingCart, MapPin, Download, Search } from "lucide-react";
+import { Package, ShoppingCart, MapPin, Download, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { generateGuaranteeContract } from "@/lib/generateContract";
@@ -83,7 +83,7 @@ const PacksPage = () => {
     loadData();
   };
 
-  const distributeCommissions = async (buyerId: string, packPrice: number, baseCommission: number) => {
+  const distributeCommissions = async (buyerId: string, packPrice: number, _baseCommission: number) => {
     const { data: levels } = await supabase.from("commission_levels").select("*").order("level_number");
     if (!levels || levels.length === 0) return;
 
@@ -156,35 +156,7 @@ const PacksPage = () => {
       {/* Pack Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {filteredPacks.map(pack => (
-          <div key={pack.id} className="card-elevated flex flex-col">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="font-heading font-bold text-foreground text-lg">{pack.name}</h3>
-                {pack.partner_companies?.name && (
-                  <p className="text-xs text-muted-foreground font-body">par {pack.partner_companies.name}</p>
-                )}
-              </div>
-              <Package className="w-6 h-6 text-primary" />
-            </div>
-            <p className="text-2xl font-heading font-bold text-primary mb-2">{Number(pack.price).toLocaleString("fr-FR")} FCFA</p>
-            {pack.description && <p className="text-sm text-muted-foreground font-body mb-3">{pack.description}</p>}
-            {pack.physical_prizes && (
-              <div className="bg-secondary rounded-lg p-3 mb-3">
-                <p className="text-xs font-semibold text-foreground mb-1 font-body">🎁 Prix physiques inclus:</p>
-                <p className="text-xs text-muted-foreground font-body">{pack.physical_prizes}</p>
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground font-body mb-4">Commission: {pack.commission_percentage}%</p>
-            <div className="mt-auto space-y-2">
-              <button onClick={() => setSelectedPack(pack)} className="btn-gold !text-sm !py-2.5 w-full">
-                <ShoppingCart className="w-4 h-4 mr-2" /> Acheter ce pack
-              </button>
-              <button onClick={() => handleDownloadContract(pack)}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-body text-muted-foreground hover:bg-secondary transition-colors">
-                <Download className="w-4 h-4" /> Contrat de garantie
-              </button>
-            </div>
-          </div>
+          <PackCard key={pack.id} pack={pack} onBuy={() => setSelectedPack(pack)} onContract={() => handleDownloadContract(pack)} />
         ))}
         {filteredPacks.length === 0 && <p className="text-muted-foreground font-body col-span-3 text-center py-12">Aucun pack trouvé</p>}
       </div>
@@ -231,6 +203,67 @@ const PacksPage = () => {
         </div>
       )}
     </DashboardLayout>
+  );
+};
+
+const PackCard = ({ pack, onBuy, onContract }: { pack: any; onBuy: () => void; onContract: () => void }) => {
+  const [imgIndex, setImgIndex] = useState(0);
+  const images: string[] = pack.images || [];
+
+  return (
+    <div className="card-elevated flex flex-col">
+      {/* Image carousel */}
+      {images.length > 0 && (
+        <div className="relative mb-3 rounded-lg overflow-hidden bg-secondary aspect-video">
+          <img src={images[imgIndex]} alt={pack.name} className="w-full h-full object-cover" />
+          {images.length > 1 && (
+            <>
+              <button onClick={() => setImgIndex((imgIndex - 1 + images.length) % images.length)}
+                className="absolute left-1 top-1/2 -translate-y-1/2 p-1 bg-foreground/50 text-background rounded-full">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button onClick={() => setImgIndex((imgIndex + 1) % images.length)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 bg-foreground/50 text-background rounded-full">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+                {images.map((_, i) => (
+                  <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === imgIndex ? "bg-background" : "bg-background/50"}`} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="font-heading font-bold text-foreground text-lg">{pack.name}</h3>
+          {pack.partner_companies?.name && (
+            <p className="text-xs text-muted-foreground font-body">par {pack.partner_companies.name}</p>
+          )}
+        </div>
+        <Package className="w-6 h-6 text-primary shrink-0" />
+      </div>
+      <p className="text-2xl font-heading font-bold text-primary mb-2">{Number(pack.price).toLocaleString("fr-FR")} FCFA</p>
+      {pack.description && <p className="text-sm text-muted-foreground font-body mb-3">{pack.description}</p>}
+      {pack.physical_prizes && (
+        <div className="bg-secondary rounded-lg p-3 mb-3">
+          <p className="text-xs font-semibold text-foreground mb-1 font-body">🎁 Prix physiques inclus:</p>
+          <p className="text-xs text-muted-foreground font-body">{pack.physical_prizes}</p>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground font-body mb-4">Commission: {pack.commission_percentage}%</p>
+      <div className="mt-auto space-y-2">
+        <button onClick={onBuy} className="btn-gold !text-sm !py-2.5 w-full">
+          <ShoppingCart className="w-4 h-4 mr-2" /> Acheter ce pack
+        </button>
+        <button onClick={onContract}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-input text-sm font-body text-muted-foreground hover:bg-secondary transition-colors">
+          <Download className="w-4 h-4" /> Contrat de garantie
+        </button>
+      </div>
+    </div>
   );
 };
 
