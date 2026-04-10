@@ -8,14 +8,14 @@ const CTASection = () => {
       
       <div className="relative z-10 container mx-auto px-6 text-center">
         <h2 className="text-3xl md:text-5xl font-heading font-bold text-primary-foreground mb-6">
-          Prêt à rejoindre la <span className="text-gradient-gold">Moisson</span> ?
+          Prêt à rejoindre la <span className="text-gradient-gold">famille</span> ?
         </h2>
         <p className="text-primary-foreground/80 text-lg max-w-xl mx-auto mb-10 font-body">
-          Inscrivez-vous maintenant avec un code de parrainage et commencez à bâtir votre réseau dès aujourd'hui.
+          Inscrivez-vous maintenant et commencez à bâtir votre avenir avec une communauté qui vous soutient.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link to="/inscription" className="btn-gold text-lg">
-            🌾 Rejoindre maintenant
+            🤝 Rejoindre maintenant
           </Link>
           <Link
             to="/connexion"
