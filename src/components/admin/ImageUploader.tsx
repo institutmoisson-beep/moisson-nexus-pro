@@ -2,6 +2,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { optimizeImage } from "@/lib/imageOptimizer";
 
 interface ImageUploaderProps {
   folder: string;
@@ -26,15 +27,20 @@ const ImageUploader = ({ folder, images, onChange, max = 5, label = "Images" }: 
     const newUrls: string[] = [];
 
     for (const file of Array.from(files)) {
-      const ext = file.name.split(".").pop();
-      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("images").upload(path, file);
-      if (error) {
-        toast.error(`Erreur upload: ${file.name}`);
-        continue;
+      try {
+        const optimized = await optimizeImage(file, 1200, 1200, 0.7);
+        const ext = optimized.name.split(".").pop() || "webp";
+        const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("images").upload(path, optimized);
+        if (error) {
+          toast.error(`Erreur upload: ${file.name}`);
+          continue;
+        }
+        const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      } catch {
+        toast.error(`Erreur optimisation: ${file.name}`);
       }
-      const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
-      newUrls.push(urlData.publicUrl);
     }
 
     onChange([...images, ...newUrls]);
