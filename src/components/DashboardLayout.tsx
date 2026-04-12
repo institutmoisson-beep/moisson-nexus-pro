@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LayoutDashboard, Wallet, Package, Users, User, Shield, LogOut, Menu, X, UserCheck, Store } from "lucide-react";
+import InstallPWA from "@/components/InstallPWA";
 import logo from "@/assets/logo-moisson.png";
 
 const NAV_ITEMS = [
@@ -108,6 +109,8 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         {children}
       </main>
+
+      <InstallPWA />
     </div>
   );
 };

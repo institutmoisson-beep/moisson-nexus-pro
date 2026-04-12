@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Share2, User, Mail, Phone, MapPin, Award } from "lucide-react";
+import { Copy, Share2, User, Mail, Phone, MapPin, Award, Truck } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -26,13 +26,8 @@ const ProfilePage = () => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ phone: "", address: "", city: "", street: "", country: "" });
 
-  useEffect(() => {
-    if (!loading && !user) navigate("/connexion");
-  }, [user, loading]);
-
-  useEffect(() => {
-    if (user) loadProfile();
-  }, [user]);
+  useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
+  useEffect(() => { if (user) loadProfile(); }, [user]);
 
   const loadProfile = async () => {
     const { data } = await supabase.from("profiles").select("*").eq("user_id", user!.id).single();
@@ -50,6 +45,8 @@ const ProfilePage = () => {
   const referralLink = profile ? `${window.location.origin}/inscription?ref=${profile.referral_code}` : "";
 
   const currentLevelIndex = CAREER_LEVELS.findIndex(l => l.key === profile?.career_level);
+  const currentLevel = CAREER_LEVELS[currentLevelIndex];
+  const nextLevel = currentLevelIndex < CAREER_LEVELS.length - 1 ? CAREER_LEVELS[currentLevelIndex + 1] : null;
 
   if (loading || !profile) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground font-body">Chargement...</div></div>;
@@ -78,19 +75,32 @@ const ProfilePage = () => {
           <div className="flex items-center gap-2"><Award className="w-4 h-4 text-muted-foreground" /> MLM: {profile.is_mlm_active ? "Actif ✅" : "Inactif"}</div>
         </div>
 
+        {/* Delivery Address Section */}
+        <div className="mt-4 pt-4 border-t border-border">
+          <h3 className="font-heading font-semibold text-foreground flex items-center gap-2 mb-2"><Truck className="w-4 h-4" /> Adresse de livraison</h3>
+          {!editing ? (
+            <div className="text-sm font-body text-muted-foreground space-y-1">
+              <p>{profile.street || "Rue non renseignée"}</p>
+              <p>{profile.city || "Ville non renseignée"}, {profile.country || "Pays non renseigné"}</p>
+              <p>{profile.address || ""}</p>
+            </div>
+          ) : null}
+        </div>
+
         {!editing ? (
           <button onClick={() => setEditing(true)} className="mt-4 btn-hero !text-sm !py-2 !px-4">Modifier mon profil</button>
         ) : (
           <div className="mt-4 space-y-3 border-t border-border pt-4">
             <input placeholder="Téléphone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})}
               className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
+            <h3 className="font-heading font-semibold text-foreground flex items-center gap-2 text-sm"><Truck className="w-4 h-4" /> Adresse de livraison</h3>
             <input placeholder="Pays" value={form.country} onChange={e => setForm({...form, country: e.target.value})}
               className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
             <input placeholder="Ville" value={form.city} onChange={e => setForm({...form, city: e.target.value})}
               className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
             <input placeholder="Rue / Quartier" value={form.street} onChange={e => setForm({...form, street: e.target.value})}
               className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
-            <input placeholder="Adresse" value={form.address} onChange={e => setForm({...form, address: e.target.value})}
+            <input placeholder="Adresse complète" value={form.address} onChange={e => setForm({...form, address: e.target.value})}
               className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
             <div className="flex gap-3">
               <button onClick={saveProfile} className="btn-gold !text-sm !py-2">Enregistrer</button>
@@ -120,24 +130,35 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Career Progress */}
+      {/* Career Progress - Current + Next only */}
       <div className="card-elevated">
         <h2 className="text-lg font-heading font-semibold text-foreground mb-4">🏆 Profil de carrière</h2>
         <div className="space-y-3">
-          {CAREER_LEVELS.map((level, i) => (
-            <div key={level.key} className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-              i === currentLevelIndex ? "bg-primary/10 border border-primary/30" :
-              i < currentLevelIndex ? "bg-harvest-green/5" : "bg-muted/30"
-            }`}>
-              <span className="text-xl">{level.icon}</span>
+          {currentLevel && (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/10 border border-primary/30">
+              <span className="text-2xl">{currentLevel.icon}</span>
               <div className="flex-1">
-                <p className={`text-sm font-semibold font-body ${i <= currentLevelIndex ? "text-foreground" : "text-muted-foreground"}`}>{level.label}</p>
-                <p className="text-xs text-muted-foreground font-body">{level.desc}</p>
+                <p className="text-sm font-semibold font-body text-foreground">{currentLevel.label}</p>
+                <p className="text-xs text-muted-foreground font-body">{currentLevel.desc}</p>
               </div>
-              {i < currentLevelIndex && <span className="text-harvest-green text-xs font-bold">✓</span>}
-              {i === currentLevelIndex && <span className="text-primary text-xs font-bold">Actuel</span>}
+              <span className="text-primary text-xs font-bold bg-primary/10 px-2 py-1 rounded-full">Actuel</span>
             </div>
-          ))}
+          )}
+          {nextLevel && (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/30 border border-border">
+              <span className="text-2xl">{nextLevel.icon}</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold font-body text-muted-foreground">{nextLevel.label}</p>
+                <p className="text-xs text-muted-foreground font-body">{nextLevel.desc}</p>
+              </div>
+              <span className="text-gold text-xs font-bold bg-gold/10 px-2 py-1 rounded-full">Prochain</span>
+            </div>
+          )}
+          {!nextLevel && currentLevel && (
+            <div className="text-center py-4">
+              <p className="text-sm text-harvest-green font-body font-semibold">🏆 Vous avez atteint le niveau maximum !</p>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

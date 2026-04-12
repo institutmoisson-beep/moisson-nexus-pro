@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Globe, Phone, Mail, MessageCircle, Facebook, Clock, ArrowLeft, ShoppingCart, MapPin, Truck } from "lucide-react";
+import { Globe, Phone, Mail, MessageCircle, Facebook, Clock, ArrowLeft, ShoppingCart, MapPin, Truck, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ const StandPage = () => {
   const [paymentMode, setPaymentMode] = useState<"wallet" | "cod">("wallet");
   const [deliveryForm, setDeliveryForm] = useState({ address: "", city: "", country: "", phone: "", street: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => { loadData(); }, []);
 
@@ -47,6 +48,12 @@ const StandPage = () => {
   };
 
   const partnerProducts = (partnerId: string) => products.filter(p => p.partner_company_id === partnerId);
+
+  const filteredPartners = partners.filter(p => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return p.name.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q);
+  });
 
   const handleBuyProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,10 +93,17 @@ const StandPage = () => {
 
       <main className="container mx-auto px-6 py-8">
         <h1 className="text-3xl font-heading font-bold text-foreground mb-2">Nos Entreprises Partenaires</h1>
-        <p className="text-muted-foreground font-body mb-8">Découvrez les entreprises qui font confiance à Institut Moisson et leurs produits</p>
+        <p className="text-muted-foreground font-body mb-6">Découvrez les entreprises qui font confiance à Institut Moisson</p>
+
+        {/* Search */}
+        <div className="relative max-w-md mb-8">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input placeholder="Rechercher une entreprise..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
+        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {partners.map(partner => (
+          {filteredPartners.map(partner => (
             <div key={partner.id} className="card-elevated hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setSelectedPartner(partner)}>
               {partner.image1_url && (
                 <div className="relative -mx-4 -mt-4 mb-4 rounded-t-xl overflow-hidden">
@@ -132,23 +146,22 @@ const StandPage = () => {
                     <Phone className="w-3.5 h-3.5" /> Appeler
                   </a>
                 )}
+                {partner.website && (
+                  <a href={partner.website.startsWith("http") ? partner.website : `https://${partner.website}`} target="_blank" rel="noopener" onClick={e => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors">
+                    <Globe className="w-3.5 h-3.5" /> Site web
+                  </a>
+                )}
               </div>
 
               {partnerProducts(partner.id).length > 0 && (
                 <div className="border-t border-border pt-3 mt-2">
                   <p className="text-xs font-semibold text-foreground mb-2 font-body">🛍️ {partnerProducts(partner.id).length} produit(s)</p>
-                  {partnerProducts(partner.id).slice(0, 3).map(prod => (
-                    <div key={prod.id} className="flex items-center gap-2 text-xs font-body py-1">
-                      {prod.images?.[0] && <img src={prod.images[0]} alt="" className="w-8 h-8 rounded object-cover" loading="lazy" />}
-                      <span className="text-muted-foreground flex-1 truncate">{prod.name}</span>
-                      <span className="font-semibold text-primary">{Number(prod.price).toLocaleString("fr-FR")} F</span>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>
           ))}
-          {partners.length === 0 && <p className="text-muted-foreground font-body col-span-3 text-center py-12">Aucun partenaire pour le moment</p>}
+          {filteredPartners.length === 0 && <p className="text-muted-foreground font-body col-span-3 text-center py-12">Aucun partenaire trouvé</p>}
         </div>
 
         {/* Partner Detail Modal */}
@@ -172,11 +185,11 @@ const StandPage = () => {
               {selectedPartner.description && <p className="text-sm text-foreground font-body mb-4">{selectedPartner.description}</p>}
               {selectedPartner.image2_url && <img src={selectedPartner.image2_url} alt="" className="w-full h-32 rounded-lg object-cover mb-4" loading="lazy" />}
               <div className="space-y-2 mb-4">
-                {selectedPartner.phone && <p className="text-sm font-body flex items-center gap-2"><Phone className="w-4 h-4 text-muted-foreground" /> {selectedPartner.phone}</p>}
-                {selectedPartner.email && <p className="text-sm font-body flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" /> {selectedPartner.email}</p>}
-                {selectedPartner.whatsapp && <a href={`https://wa.me/${selectedPartner.whatsapp}`} target="_blank" className="text-sm font-body flex items-center gap-2 text-harvest-green"><MessageCircle className="w-4 h-4" /> {selectedPartner.whatsapp}</a>}
-                {selectedPartner.website && <a href={selectedPartner.website.startsWith("http") ? selectedPartner.website : `https://${selectedPartner.website}`} target="_blank" className="text-sm font-body flex items-center gap-2 text-primary"><Globe className="w-4 h-4" /> {selectedPartner.website}</a>}
-                {selectedPartner.facebook && <a href={selectedPartner.facebook.startsWith("http") ? selectedPartner.facebook : `https://facebook.com/${selectedPartner.facebook}`} target="_blank" className="text-sm font-body flex items-center gap-2 text-blue-600"><Facebook className="w-4 h-4" /> Facebook</a>}
+                {selectedPartner.phone && <a href={`tel:${selectedPartner.phone}`} className="text-sm font-body flex items-center gap-2 text-foreground hover:text-primary transition-colors"><Phone className="w-4 h-4 text-muted-foreground" /> {selectedPartner.phone}</a>}
+                {selectedPartner.email && <a href={`mailto:${selectedPartner.email}`} className="text-sm font-body flex items-center gap-2 text-foreground hover:text-primary transition-colors"><Mail className="w-4 h-4 text-muted-foreground" /> {selectedPartner.email}</a>}
+                {selectedPartner.whatsapp && <a href={`https://wa.me/${selectedPartner.whatsapp}`} target="_blank" className="text-sm font-body flex items-center gap-2 text-harvest-green hover:underline"><MessageCircle className="w-4 h-4" /> {selectedPartner.whatsapp}</a>}
+                {selectedPartner.website && <a href={selectedPartner.website.startsWith("http") ? selectedPartner.website : `https://${selectedPartner.website}`} target="_blank" className="text-sm font-body flex items-center gap-2 text-primary hover:underline"><Globe className="w-4 h-4" /> {selectedPartner.website}</a>}
+                {selectedPartner.facebook && <a href={selectedPartner.facebook.startsWith("http") ? selectedPartner.facebook : `https://facebook.com/${selectedPartner.facebook}`} target="_blank" className="text-sm font-body flex items-center gap-2 text-primary hover:underline"><Facebook className="w-4 h-4" /> Facebook</a>}
               </div>
 
               {partnerProducts(selectedPartner.id).length > 0 && (
