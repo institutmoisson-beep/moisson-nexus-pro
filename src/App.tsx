@@ -10,6 +10,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Wallet from "./pages/Wallet";
 import Packs from "./pages/Packs";
+import PackDetail from "./pages/PackDetail";
 import Network from "./pages/Network";
 import Profile from "./pages/Profile";
 import Partners from "./pages/Partners";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/portefeuille" element={<Wallet />} />
             <Route path="/packs" element={<Packs />} />
+            <Route path="/packs/:id" element={<PackDetail />} />
             <Route path="/reseau" element={<Network />} />
             <Route path="/profil" element={<Profile />} />
             <Route path="/partenaires" element={<Partners />} />
