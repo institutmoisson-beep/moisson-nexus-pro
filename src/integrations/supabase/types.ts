@@ -86,6 +86,38 @@ export type Database = {
         }
         Relationships: []
       }
+      pack_commissions: {
+        Row: {
+          created_at: string
+          id: string
+          level_number: number
+          pack_id: string
+          percentage: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level_number: number
+          pack_id: string
+          percentage: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level_number?: number
+          pack_id?: string
+          percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pack_commissions_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pack_orders: {
         Row: {
           amount_paid: number
