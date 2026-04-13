@@ -203,6 +203,7 @@ export type Database = {
           id: string
           images: string[] | null
           is_active: boolean
+          is_mlm_pack: boolean
           name: string
           partner_company_id: string | null
           physical_prizes: string | null
@@ -217,6 +218,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_active?: boolean
+          is_mlm_pack?: boolean
           name: string
           partner_company_id?: string | null
           physical_prizes?: string | null
@@ -231,6 +233,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_active?: boolean
+          is_mlm_pack?: boolean
           name?: string
           partner_company_id?: string | null
           physical_prizes?: string | null
@@ -469,6 +472,27 @@ export type Database = {
           },
         ]
       }
+      staff_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -579,6 +603,8 @@ export type Database = {
         | "bonus"
         | "admin_credit"
         | "admin_debit"
+        | "transfer"
+        | "product_purchase"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -728,6 +754,8 @@ export const Constants = {
         "bonus",
         "admin_credit",
         "admin_debit",
+        "transfer",
+        "product_purchase",
       ],
     },
   },
