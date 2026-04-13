@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Settings } from "lucide-react";
+import { Plus, Trash2, Settings, Edit } from "lucide-react";
 import ImageUploader from "./ImageUploader";
 
 const AdminPacks = () => {
@@ -9,9 +9,10 @@ const AdminPacks = () => {
   const [partners, setPartners] = useState<any[]>([]);
   const [sectors, setSectors] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editPack, setEditPack] = useState<any>(null);
   const [form, setForm] = useState({
     name: "", price: "", commission_percentage: "10", description: "",
-    physical_prizes: "", partner_company_id: "", sector_id: "",
+    physical_prizes: "", partner_company_id: "", sector_id: "", is_mlm_pack: true,
   });
   const [packImages, setPackImages] = useState<string[]>([]);
   const [commissionPack, setCommissionPack] = useState<any>(null);
@@ -33,22 +34,47 @@ const AdminPacks = () => {
     setSectors(sectorsRes.data || []);
   };
 
-  const handleCreate = async () => {
+  const resetForm = () => {
+    setForm({ name: "", price: "", commission_percentage: "10", description: "", physical_prizes: "", partner_company_id: "", sector_id: "", is_mlm_pack: true });
+    setPackImages([]);
+    setEditPack(null);
+  };
+
+  const startEdit = (p: any) => {
+    setEditPack(p);
+    setForm({
+      name: p.name, price: String(p.price), commission_percentage: String(p.commission_percentage),
+      description: p.description || "", physical_prizes: p.physical_prizes || "",
+      partner_company_id: p.partner_company_id || "", sector_id: p.sector_id || "",
+      is_mlm_pack: p.is_mlm_pack ?? true,
+    });
+    setPackImages(p.images || []);
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
     if (!form.name || !form.price) { toast.error("Nom et prix requis"); return; }
     if (!form.sector_id) { toast.error("Veuillez sélectionner un secteur"); return; }
-    const { error } = await supabase.from("packs").insert({
+    const data = {
       name: form.name, price: Number(form.price),
       commission_percentage: Number(form.commission_percentage),
       description: form.description, physical_prizes: form.physical_prizes,
       partner_company_id: form.partner_company_id || null,
       sector_id: form.sector_id || null,
       images: packImages,
-    });
-    if (error) { toast.error("Erreur: " + error.message); return; }
-    toast.success("Pack créé !");
+      is_mlm_pack: form.is_mlm_pack,
+    };
+    if (editPack) {
+      const { error } = await supabase.from("packs").update(data).eq("id", editPack.id);
+      if (error) { toast.error("Erreur: " + error.message); return; }
+      toast.success("Pack modifié !");
+    } else {
+      const { error } = await supabase.from("packs").insert(data);
+      if (error) { toast.error("Erreur: " + error.message); return; }
+      toast.success("Pack créé !");
+    }
     setShowForm(false);
-    setForm({ name: "", price: "", commission_percentage: "10", description: "", physical_prizes: "", partner_company_id: "", sector_id: "" });
-    setPackImages([]);
+    resetForm();
     loadData();
   };
 
@@ -72,7 +98,7 @@ const AdminPacks = () => {
   };
 
   const generateCommissions = () => {
-    if (!commLevel1 || Number(commLevel1) <= 0) { toast.error("Commission niveau 1 requise"); return; }
+    if (!commLevel1 || Number(commLevel1) <= 0) return [];
     const base = Number(commLevel1);
     const levels: { level: number; pct: number }[] = [];
     for (let i = 0; i < commLevels; i++) {
@@ -85,17 +111,9 @@ const AdminPacks = () => {
 
   const saveCommissions = async () => {
     const levels = generateCommissions();
-    if (!levels || levels.length === 0) return;
-
-    // Delete existing
+    if (levels.length === 0) { toast.error("Commission niveau 1 requise"); return; }
     await supabase.from("pack_commissions").delete().eq("pack_id", commissionPack.id);
-
-    // Insert new
-    const rows = levels.map(l => ({
-      pack_id: commissionPack.id,
-      level_number: l.level,
-      percentage: l.pct,
-    }));
+    const rows = levels.map(l => ({ pack_id: commissionPack.id, level_number: l.level, percentage: l.pct }));
     const { error } = await supabase.from("pack_commissions").insert(rows);
     if (error) { toast.error("Erreur: " + error.message); return; }
     toast.success(`${levels.length} niveaux de commission enregistrés !`);
@@ -108,13 +126,14 @@ const AdminPacks = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-heading font-bold text-foreground">Packs d'activation</h1>
-        <button onClick={() => setShowForm(!showForm)} className="btn-hero !text-sm !py-2 !px-4">
+        <button onClick={() => { resetForm(); setShowForm(!showForm); }} className="btn-hero !text-sm !py-2 !px-4">
           <Plus className="w-4 h-4 mr-1" /> Ajouter
         </button>
       </div>
 
       {showForm && (
         <div className="card-elevated mb-6 space-y-3">
+          <h3 className="font-heading font-semibold text-foreground">{editPack ? "Modifier le pack" : "Nouveau pack"}</h3>
           <input placeholder="Nom du pack" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
             className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
           <div className="grid grid-cols-2 gap-3">
@@ -139,8 +158,15 @@ const AdminPacks = () => {
               {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
+          <label className="flex items-center gap-2 text-sm font-body text-foreground">
+            <input type="checkbox" checked={form.is_mlm_pack} onChange={e => setForm({...form, is_mlm_pack: e.target.checked})} />
+            Pack MLM (active le système de parrainage)
+          </label>
           <ImageUploader folder="packs" images={packImages} onChange={setPackImages} max={6} label="Images du pack" />
-          <button onClick={handleCreate} className="btn-gold !text-sm !py-2">Créer le pack</button>
+          <div className="flex gap-3">
+            <button onClick={handleSave} className="btn-gold !text-sm !py-2">{editPack ? "Enregistrer" : "Créer le pack"}</button>
+            {editPack && <button onClick={() => { setShowForm(false); resetForm(); }} className="px-4 py-2 rounded-lg border border-input text-muted-foreground font-body text-sm">Annuler</button>}
+          </div>
         </div>
       )}
 
@@ -148,8 +174,12 @@ const AdminPacks = () => {
         {packs.map((p: any) => (
           <div key={p.id} className={`card-elevated ${!p.is_active ? "opacity-50" : ""}`}>
             <div className="flex justify-between items-start mb-2">
-              <h3 className="font-heading font-semibold text-foreground">{p.name}</h3>
+              <div>
+                <h3 className="font-heading font-semibold text-foreground">{p.name}</h3>
+                {!p.is_mlm_pack && <span className="text-xs bg-accent/20 text-accent-foreground px-1.5 py-0.5 rounded">Produit ordinaire</span>}
+              </div>
               <div className="flex gap-1">
+                <button onClick={() => startEdit(p)} className="p-1 text-primary hover:bg-primary/10 rounded" title="Modifier"><Edit className="w-4 h-4" /></button>
                 <button onClick={() => openCommissions(p)} className="p-1 text-primary hover:bg-primary/10 rounded" title="Commissions"><Settings className="w-4 h-4" /></button>
                 <button onClick={() => deletePack(p.id)} className="p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="w-4 h-4" /></button>
               </div>
@@ -163,7 +193,7 @@ const AdminPacks = () => {
             )}
             <p className="text-xl font-bold text-primary mb-1">{Number(p.price).toLocaleString("fr-FR")} FCFA</p>
             <p className="text-xs text-muted-foreground font-body">Commission: {p.commission_percentage}%</p>
-            {p.description && <p className="text-sm text-muted-foreground font-body mt-2">{p.description}</p>}
+            {p.description && <p className="text-sm text-muted-foreground font-body mt-2 line-clamp-2">{p.description}</p>}
             {p.partner_companies?.name && <p className="text-xs text-muted-foreground font-body mt-1">Partenaire: {p.partner_companies.name}</p>}
           </div>
         ))}
@@ -176,7 +206,7 @@ const AdminPacks = () => {
           <div className="bg-card rounded-xl border border-border p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-heading font-bold text-foreground mb-4">💰 Commissions: {commissionPack.name}</h2>
             <p className="text-sm text-muted-foreground font-body mb-4">
-              Définissez la commission du niveau 1, le système calcule automatiquement les niveaux suivants avec une réduction progressive.
+              Définissez la commission du niveau 1, le système calcule automatiquement les niveaux suivants.
             </p>
             <div className="space-y-3 mb-4">
               <div>
@@ -193,14 +223,11 @@ const AdminPacks = () => {
                 <label className="text-sm font-body font-medium text-foreground">Réduction par niveau (%)</label>
                 <input type="number" value={commReduction} onChange={e => setCommReduction(Number(e.target.value))}
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" min={1} max={90} />
-                <p className="text-xs text-muted-foreground font-body mt-1">Chaque niveau reçoit {100 - commReduction}% du niveau précédent</p>
               </div>
             </div>
-
-            {/* Preview */}
-            {previewLevels && previewLevels.length > 0 && (
+            {previewLevels.length > 0 && (
               <div className="bg-secondary rounded-lg p-3 mb-4 max-h-48 overflow-y-auto">
-                <p className="text-xs font-semibold text-foreground mb-2 font-body">Aperçu des niveaux:</p>
+                <p className="text-xs font-semibold text-foreground mb-2 font-body">Aperçu:</p>
                 {previewLevels.map(l => (
                   <div key={l.level} className="flex justify-between text-xs font-body py-0.5">
                     <span className="text-muted-foreground">Niveau {l.level}</span>
@@ -209,20 +236,6 @@ const AdminPacks = () => {
                 ))}
               </div>
             )}
-
-            {/* Existing commissions */}
-            {packCommissions.length > 0 && (
-              <div className="bg-muted/30 rounded-lg p-3 mb-4">
-                <p className="text-xs font-semibold text-foreground mb-2 font-body">Commissions actuelles:</p>
-                {packCommissions.map(c => (
-                  <div key={c.id} className="flex justify-between text-xs font-body py-0.5">
-                    <span className="text-muted-foreground">Niveau {c.level_number}</span>
-                    <span className="font-semibold">{c.percentage}%</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
             <div className="flex gap-3">
               <button onClick={saveCommissions} className="flex-1 btn-gold !text-sm !py-2.5">Enregistrer</button>
               <button onClick={() => setCommissionPack(null)} className="px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary">Annuler</button>

@@ -7,7 +7,7 @@ import logo from "@/assets/logo-moisson.png";
 import {
   Users, Package, Building2, CreditCard, TrendingUp, Award,
   LogOut, ArrowLeft, Wallet, FolderOpen, UserCheck,
-  Menu, X
+  Menu, X, ShoppingBag, Settings2
 } from "lucide-react";
 import AdminOverview from "@/components/admin/AdminOverview";
 import AdminUsers from "@/components/admin/AdminUsers";
@@ -19,8 +19,10 @@ import AdminCommissions from "@/components/admin/AdminCommissions";
 import AdminBonuses from "@/components/admin/AdminBonuses";
 import AdminSectors from "@/components/admin/AdminSectors";
 import AdminProDirectory from "@/components/admin/AdminProDirectory";
+import AdminOrders from "@/components/admin/AdminOrders";
+import AdminFees from "@/components/admin/AdminFees";
 
-type AdminTab = "overview" | "users" | "packs" | "sectors" | "partners" | "transactions" | "payments" | "commissions" | "bonuses" | "pro_directory";
+type AdminTab = "overview" | "users" | "packs" | "sectors" | "partners" | "transactions" | "payments" | "commissions" | "bonuses" | "pro_directory" | "orders" | "fees";
 
 const AdminDashboard = () => {
   const { user, signOut, loading } = useAuth();
@@ -52,10 +54,12 @@ const AdminDashboard = () => {
     { key: "packs", label: "Packs", icon: <Package className="w-4 h-4" /> },
     { key: "sectors", label: "Secteurs", icon: <FolderOpen className="w-4 h-4" /> },
     { key: "partners", label: "Partenaires", icon: <Building2 className="w-4 h-4" /> },
+    { key: "orders", label: "Commandes", icon: <ShoppingBag className="w-4 h-4" /> },
     { key: "transactions", label: "Transactions", icon: <CreditCard className="w-4 h-4" /> },
     { key: "payments", label: "Moyens de paiement", icon: <Wallet className="w-4 h-4" /> },
     { key: "commissions", label: "Commissions", icon: <TrendingUp className="w-4 h-4" /> },
     { key: "bonuses", label: "Bonus carrière", icon: <Award className="w-4 h-4" /> },
+    { key: "fees", label: "Frais & Config", icon: <Settings2 className="w-4 h-4" /> },
   ];
 
   const handleTabClick = (key: AdminTab) => {
@@ -65,7 +69,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -87,7 +90,6 @@ const AdminDashboard = () => {
       </header>
 
       <div className="flex relative">
-        {/* Sidebar - Desktop */}
         <aside className="w-56 min-h-[calc(100vh-57px)] border-r border-border bg-card p-3 hidden md:block shrink-0">
           <nav className="space-y-0.5">
             {tabs.map(tab => (
@@ -101,7 +103,6 @@ const AdminDashboard = () => {
           </nav>
         </aside>
 
-        {/* Mobile Sidebar Overlay */}
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 top-[57px] z-40">
             <div className="absolute inset-0 bg-foreground/30" onClick={() => setSidebarOpen(false)} />
@@ -120,7 +121,6 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* Content */}
         <main className="flex-1 p-4 md:p-6 overflow-auto min-h-[calc(100vh-57px)]">
           {activeTab === "overview" && <AdminOverview />}
           {activeTab === "users" && <AdminUsers />}
@@ -129,9 +129,11 @@ const AdminDashboard = () => {
           {activeTab === "packs" && <AdminPacks />}
           {activeTab === "sectors" && <AdminSectors />}
           {activeTab === "partners" && <AdminPartners />}
+          {activeTab === "orders" && <AdminOrders />}
           {activeTab === "payments" && <AdminPayments />}
           {activeTab === "commissions" && <AdminCommissions />}
           {activeTab === "bonuses" && <AdminBonuses />}
+          {activeTab === "fees" && <AdminFees />}
         </main>
       </div>
     </div>

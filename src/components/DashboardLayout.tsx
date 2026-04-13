@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Wallet, Package, Users, User, Shield, LogOut, Menu, X, UserCheck, Store } from "lucide-react";
+import { LayoutDashboard, Wallet, Package, Users, User, Shield, LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase } from "lucide-react";
 import InstallPWA from "@/components/InstallPWA";
 import logo from "@/assets/logo-moisson.png";
 
@@ -10,17 +10,28 @@ const NAV_ITEMS = [
   { path: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { path: "/portefeuille", label: "Portefeuille", icon: Wallet },
   { path: "/packs", label: "Packs", icon: Package },
+  { path: "/commandes", label: "Commandes", icon: ShoppingBag },
   { path: "/reseau", label: "Mon Réseau", icon: Users },
   { path: "/profil", label: "Profil", icon: User },
   { path: "/moissonneurs-pros", label: "Pros", icon: UserCheck },
   { path: "/stand", label: "Stand", icon: Store },
 ];
 
+const STAFF_ROLE_LABELS: Record<string, string> = {
+  financier: "Financier",
+  gestion_packs: "Gestion Packs",
+  gestion_stand: "Gestion Stand",
+  informaticien: "Informaticien",
+  commercial: "Commercial",
+  communication: "Communication",
+};
+
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [staffRoles, setStaffRoles] = useState<string[]>([]);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [profile, setProfile] = useState<any>(null);
 
@@ -32,6 +43,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
     if (user) {
       supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => setIsAdmin(!!data));
       supabase.from("profiles").select("first_name, last_name").eq("user_id", user.id).single().then(({ data }) => setProfile(data));
+      supabase.from("staff_roles").select("role").eq("user_id", user.id).then(({ data }) => setStaffRoles((data || []).map((r: any) => r.role)));
     }
   }, [user]);
 
@@ -42,7 +54,6 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -55,7 +66,6 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             </Link>
           </div>
 
-          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-1">
             {NAV_ITEMS.map(item => (
               <Link key={item.path} to={item.path}
@@ -68,6 +78,11 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             {isAdmin && (
               <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-accent text-accent-foreground font-semibold hover:opacity-90 transition-colors">
                 <Shield className="w-4 h-4" /> Admin
+              </Link>
+            )}
+            {staffRoles.length > 0 && !isAdmin && (
+              <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-primary/10 text-primary font-semibold hover:bg-primary/20 transition-colors">
+                <Briefcase className="w-4 h-4" /> Gestion
               </Link>
             )}
           </nav>
@@ -83,7 +98,6 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
       </header>
 
-      {/* Mobile Nav */}
       {mobileMenu && (
         <div className="md:hidden border-b border-border bg-card">
           <nav className="p-3 space-y-1">
@@ -101,11 +115,16 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 <Shield className="w-4 h-4" /> Administration
               </Link>
             )}
+            {staffRoles.length > 0 && !isAdmin && (
+              <Link to="/admin" onClick={() => setMobileMenu(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-primary/10 text-primary font-semibold">
+                <Briefcase className="w-4 h-4" /> Gestion ({staffRoles.map(r => STAFF_ROLE_LABELS[r] || r).join(", ")})
+              </Link>
+            )}
           </nav>
         </div>
       )}
 
-      {/* Content */}
       <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         {children}
       </main>

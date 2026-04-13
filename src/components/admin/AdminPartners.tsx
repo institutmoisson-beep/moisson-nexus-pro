@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Package } from "lucide-react";
+import { Plus, Trash2, Package, Edit } from "lucide-react";
 import ImageUploader from "./ImageUploader";
 
 const AdminPartners = () => {
   const [partners, setPartners] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editPartner, setEditPartner] = useState<any>(null);
   const [showProductForm, setShowProductForm] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", description: "", website: "", whatsapp: "", facebook: "", email: "", phone: "" });
   const [logoImages, setLogoImages] = useState<string[]>([]);
@@ -26,45 +27,59 @@ const AdminPartners = () => {
     setProducts(productsRes.data || []);
   };
 
-  const handleCreate = async () => {
+  const resetForm = () => {
+    setForm({ name: "", description: "", website: "", whatsapp: "", facebook: "", email: "", phone: "" });
+    setLogoImages([]); setBannerImages([]); setEditPartner(null);
+  };
+
+  const startEdit = (p: any) => {
+    setEditPartner(p);
+    setForm({
+      name: p.name, description: p.description || "", website: p.website || "",
+      whatsapp: p.whatsapp || "", facebook: p.facebook || "", email: p.email || "", phone: p.phone || "",
+    });
+    setLogoImages(p.logo_url ? [p.logo_url] : []);
+    setBannerImages([p.image1_url, p.image2_url].filter(Boolean));
+    setShowForm(true);
+  };
+
+  const handleSave = async () => {
     if (!form.name) { toast.error("Nom requis"); return; }
-    const { error } = await supabase.from("partner_companies").insert({
+    const data = {
       ...form,
       logo_url: logoImages[0] || null,
       image1_url: bannerImages[0] || null,
       image2_url: bannerImages[1] || null,
-    });
-    if (error) { toast.error("Erreur"); return; }
-    toast.success("Partenaire ajouté !");
-    setShowForm(false);
-    setForm({ name: "", description: "", website: "", whatsapp: "", facebook: "", email: "", phone: "" });
-    setLogoImages([]);
-    setBannerImages([]);
-    loadData();
+    };
+    if (editPartner) {
+      const { error } = await supabase.from("partner_companies").update(data).eq("id", editPartner.id);
+      if (error) { toast.error("Erreur"); return; }
+      toast.success("Partenaire modifié !");
+    } else {
+      const { error } = await supabase.from("partner_companies").insert(data);
+      if (error) { toast.error("Erreur"); return; }
+      toast.success("Partenaire ajouté !");
+    }
+    setShowForm(false); resetForm(); loadData();
   };
 
   const handleCreateProduct = async () => {
     if (!productForm.name || !productForm.price || !showProductForm) { toast.error("Nom et prix requis"); return; }
     const { error } = await supabase.from("partner_products").insert({
-      partner_company_id: showProductForm,
-      name: productForm.name,
-      description: productForm.description,
-      price: Number(productForm.price),
-      allow_cod: productForm.allow_cod,
-      images: productImages,
+      partner_company_id: showProductForm, name: productForm.name,
+      description: productForm.description, price: Number(productForm.price),
+      allow_cod: productForm.allow_cod, images: productImages,
     });
     if (error) { toast.error("Erreur: " + error.message); return; }
     toast.success("Produit ajouté !");
     setShowProductForm(null);
     setProductForm({ name: "", description: "", price: "", allow_cod: false });
-    setProductImages([]);
-    loadData();
+    setProductImages([]); loadData();
   };
 
   const deletePartner = async (id: string) => {
     await supabase.from("partner_companies").update({ is_active: false }).eq("id", id);
-    toast.success("Partenaire désactivé");
-    loadData();
+    toast.success("Partenaire désactivé"); loadData();
   };
 
   const getPartnerProducts = (partnerId: string) => products.filter(p => p.partner_company_id === partnerId);
@@ -73,13 +88,14 @@ const AdminPartners = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-heading font-bold text-foreground">Entreprises partenaires</h1>
-        <button onClick={() => setShowForm(!showForm)} className="btn-hero !text-sm !py-2 !px-4">
+        <button onClick={() => { resetForm(); setShowForm(!showForm); }} className="btn-hero !text-sm !py-2 !px-4">
           <Plus className="w-4 h-4 mr-1" /> Ajouter
         </button>
       </div>
 
       {showForm && (
         <div className="card-elevated mb-6 space-y-3">
+          <h3 className="font-heading font-semibold text-foreground">{editPartner ? "Modifier le partenaire" : "Nouveau partenaire"}</h3>
           <input placeholder="Nom de l'entreprise" value={form.name} onChange={e => setForm({...form, name: e.target.value})}
             className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
           <textarea placeholder="Description" value={form.description} onChange={e => setForm({...form, description: e.target.value})}
@@ -98,7 +114,10 @@ const AdminPartners = () => {
           </div>
           <ImageUploader folder="partners/logos" images={logoImages} onChange={setLogoImages} max={1} label="Logo" />
           <ImageUploader folder="partners/banners" images={bannerImages} onChange={setBannerImages} max={2} label="Images de présentation" />
-          <button onClick={handleCreate} className="btn-gold !text-sm !py-2">Ajouter</button>
+          <div className="flex gap-3">
+            <button onClick={handleSave} className="btn-gold !text-sm !py-2">{editPartner ? "Enregistrer" : "Ajouter"}</button>
+            {editPartner && <button onClick={() => { setShowForm(false); resetForm(); }} className="px-4 py-2 rounded-lg border border-input text-muted-foreground font-body text-sm">Annuler</button>}
+          </div>
         </div>
       )}
 
@@ -120,6 +139,9 @@ const AdminPartners = () => {
                 </div>
               </div>
               <div className="flex gap-1">
+                <button onClick={() => startEdit(p)} className="p-1.5 text-primary hover:bg-primary/10 rounded" title="Modifier">
+                  <Edit className="w-4 h-4" />
+                </button>
                 <button onClick={() => setShowProductForm(showProductForm === p.id ? null : p.id)}
                   className="p-1.5 text-primary hover:bg-primary/10 rounded" title="Ajouter un produit">
                   <Package className="w-4 h-4" />
@@ -130,20 +152,6 @@ const AdminPartners = () => {
               </div>
             </div>
 
-            {(p.image1_url || p.image2_url) && (
-              <div className="flex gap-2 mb-3">
-                {p.image1_url && <img src={p.image1_url} alt="" className="w-24 h-16 rounded-lg object-cover border border-border" />}
-                {p.image2_url && <img src={p.image2_url} alt="" className="w-24 h-16 rounded-lg object-cover border border-border" />}
-              </div>
-            )}
-
-            <div className="text-xs text-muted-foreground font-body space-y-0.5 mb-3">
-              {p.website && <p>🌐 {p.website}</p>}
-              {p.whatsapp && <p>💬 {p.whatsapp}</p>}
-              {p.email && <p>📧 {p.email}</p>}
-            </div>
-
-            {/* Add product form */}
             {showProductForm === p.id && (
               <div className="border border-border rounded-lg p-3 mb-3 space-y-2 bg-secondary/30">
                 <p className="text-xs font-semibold text-foreground font-body">Ajouter un produit</p>
@@ -162,7 +170,6 @@ const AdminPartners = () => {
               </div>
             )}
 
-            {/* Existing products */}
             {getPartnerProducts(p.id).length > 0 && (
               <div className="border-t border-border pt-2">
                 <p className="text-xs font-semibold text-foreground font-body mb-1">Produits ({getPartnerProducts(p.id).length})</p>

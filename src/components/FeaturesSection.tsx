@@ -1,109 +1,120 @@
-import { Heart, Wallet, TrendingUp, Shield, Globe, Award } from "lucide-react";
+import { Link } from "react-router-dom";
 import communityImage from "@/assets/community-together.jpg";
 import visionImage from "@/assets/vision-unity.jpg";
-
-const features = [
-  {
-    icon: Heart,
-    title: "Entraide & Solidarité",
-    description: "Une communauté où chaque membre est soutenu, accompagné et encouragé dans son parcours vers la réussite.",
-  },
-  {
-    icon: Wallet,
-    title: "Portefeuille Intégré",
-    description: "Rechargez et retirez facilement via Mobile Money, crypto-monnaies, PayPal et plus encore.",
-  },
-  {
-    icon: TrendingUp,
-    title: "Revenus Partagés",
-    description: "Recevez vos commissions instantanément dans votre portefeuille dès qu'un membre de votre réseau progresse.",
-  },
-  {
-    icon: Award,
-    title: "Parcours de Croissance",
-    description: "10 niveaux de progression avec des bonus à chaque étape pour récompenser votre engagement.",
-  },
-  {
-    icon: Globe,
-    title: "Communauté Internationale",
-    description: "Des membres du monde entier connectés par une même vision de prospérité collective.",
-  },
-  {
-    icon: Shield,
-    title: "Protection & Confiance",
-    description: "Être Moissonneur, c'est appartenir à une famille qui protège et valorise chacun de ses membres.",
-  },
-];
 
 const FeaturesSection = () => {
   return (
     <>
       {/* Vision Section */}
-      <section id="vision" className="py-24 bg-background">
+      <section id="vision" className="py-20 bg-background">
         <div className="container mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <p className="text-primary font-semibold text-sm uppercase tracking-widest mb-3 font-body">
-                🌍 Notre Vision
-              </p>
-              <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground mb-6">
-                Bâtir un avenir <span className="text-gradient-gold">solidaire</span>
+              <p className="text-primary font-semibold text-sm uppercase tracking-widest mb-3 font-body">Notre Vision</p>
+              <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6 leading-tight">
+                Construire un avenir où <span className="text-primary">personne</span> n'est laissé pour compte
               </h2>
-              <p className="text-muted-foreground font-body text-lg leading-relaxed mb-4">
-                Institut Moisson est né d'une conviction profonde : ensemble, nous pouvons transformer nos vies. 
-                Notre communauté repose sur l'entraide, le partage et la croissance collective.
+              <p className="text-muted-foreground font-body leading-relaxed mb-6">
+                L'Institut Moisson est né d'une vision simple mais puissante : créer un espace où chaque personne
+                peut trouver du soutien, de l'entraide et des opportunités pour prospérer. Ensemble, nous formons
+                une famille qui partage les mêmes valeurs de solidarité et de réussite collective.
               </p>
-              <p className="text-muted-foreground font-body text-lg leading-relaxed">
-                Chaque membre est un maillon essentiel de cette chaîne de solidarité. 
-                En rejoignant la famille Moisson, vous ne rejoignez pas un simple réseau — 
-                vous intégrez un mouvement de vie, d'espoir et de prospérité partagée.
-              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <p className="text-2xl font-heading font-bold text-primary">🌍</p>
+                  <p className="text-sm font-body text-foreground font-semibold mt-2">Communauté mondiale</p>
+                  <p className="text-xs text-muted-foreground font-body mt-1">Des membres sur tous les continents</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gold/5 border border-gold/10">
+                  <p className="text-2xl font-heading font-bold text-gold">🤲</p>
+                  <p className="text-sm font-body text-foreground font-semibold mt-2">Entraide mutuelle</p>
+                  <p className="text-xs text-muted-foreground font-body mt-1">Chaque membre soutient l'autre</p>
+                </div>
+              </div>
             </div>
-            <div className="rounded-2xl overflow-hidden shadow-lg">
-              <img src={visionImage} alt="Notre vision d'unité" className="w-full h-80 object-cover" loading="lazy" width={1920} height={800} />
+            <div className="relative">
+              <img src={communityImage} alt="Communauté solidaire" className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]" loading="lazy" />
+              <div className="absolute -bottom-4 -left-4 bg-card rounded-xl p-4 shadow-lg border border-border">
+                <p className="text-sm font-heading font-bold text-foreground">+1000 familles</p>
+                <p className="text-xs text-muted-foreground font-body">unies pour prospérer</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section id="opportunite" className="py-24 bg-secondary/50">
+      {/* Solidarity Section */}
+      <section id="solidarite" className="py-20 bg-secondary/30">
         <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <p className="text-primary font-semibold text-sm uppercase tracking-widest mb-3 font-body">
-              L'opportunité
-            </p>
-            <h2 className="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">
-              Pourquoi choisir <span className="text-gradient-primary">Institut Moisson</span> ?
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto font-body text-lg">
-              Un système innovant qui facilite l'entraide et la réussite de chaque membre de la communauté.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
-              <div
-                key={feature.title}
-                className="card-elevated group hover:scale-[1.02] transition-all duration-300"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                  <feature.icon className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-xl font-heading font-semibold text-foreground mb-2">
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground font-body leading-relaxed">
-                  {feature.description}
-                </p>
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="order-2 md:order-1">
+              <img src={visionImage} alt="Solidarité et entraide" className="rounded-2xl shadow-2xl w-full object-cover aspect-[4/3]" loading="lazy" />
+            </div>
+            <div className="order-1 md:order-2">
+              <p className="text-harvest-green font-semibold text-sm uppercase tracking-widest mb-3 font-body">🫂 Cellule de solidarité</p>
+              <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6 leading-tight">
+                Tu n'es <span className="text-harvest-green">jamais seul</span> face à l'adversité
+              </h2>
+              <p className="text-muted-foreground font-body leading-relaxed mb-6">
+                Chez les Moissonneurs, nous avons mis en place une cellule de solidarité pour soutenir
+                ceux qui traversent des difficultés. Que tu aies perdu un proche, que tu fasses face à un problème de santé
+                ou que tu aies besoin d'aide, <strong className="text-foreground">la famille Moisson est là pour toi</strong>.
+              </p>
+              <div className="bg-card rounded-xl p-6 border border-border mb-6">
+                <p className="text-lg font-heading font-bold text-foreground mb-2">💛 Notre promesse</p>
+                <ul className="space-y-3 text-sm font-body text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-harvest-green font-bold mt-0.5">✓</span>
+                    Soutien moral et financier aux membres en difficulté
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-harvest-green font-bold mt-0.5">✓</span>
+                    Accompagnement dans les moments de perte et de deuil
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-harvest-green font-bold mt-0.5">✓</span>
+                    Un réseau de soutien actif et bienveillant
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-harvest-green font-bold mt-0.5">✓</span>
+                    Tu as perdu ta famille ? Les Moissonneurs sont ta nouvelle famille
+                  </li>
+                </ul>
               </div>
-            ))}
+              <Link to="/inscription" className="btn-hero inline-flex">
+                Rejoindre la cellule de solidarité
+              </Link>
+            </div>
           </div>
+        </div>
+      </section>
 
-          {/* Community image */}
-          <div className="mt-16 rounded-2xl overflow-hidden shadow-lg">
-            <img src={communityImage} alt="Communauté qui collabore ensemble" className="w-full h-64 md:h-80 object-cover" loading="lazy" width={1920} height={1080} />
+      {/* Opportunity Section */}
+      <section id="opportunite" className="py-20 bg-background">
+        <div className="container mx-auto px-6 text-center">
+          <p className="text-primary font-semibold text-sm uppercase tracking-widest mb-3 font-body">L'opportunité</p>
+          <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
+            Comment ça fonctionne ?
+          </h2>
+          <p className="text-muted-foreground font-body max-w-2xl mx-auto mb-12">
+            Un système simple et transparent où chaque membre grandit en aidant les autres à grandir.
+          </p>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="p-6 rounded-2xl bg-card border border-border hover:shadow-lg transition-shadow">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center text-2xl">1️⃣</div>
+              <h3 className="font-heading font-bold text-foreground mb-2">Rejoignez la famille</h3>
+              <p className="text-sm text-muted-foreground font-body">Inscrivez-vous et choisissez un pack d'activation pour démarrer votre aventure.</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-card border border-border hover:shadow-lg transition-shadow">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-gold/10 flex items-center justify-center text-2xl">2️⃣</div>
+              <h3 className="font-heading font-bold text-foreground mb-2">Partagez & Grandissez</h3>
+              <p className="text-sm text-muted-foreground font-body">Invitez d'autres personnes et construisez votre réseau de solidarité.</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-card border border-border hover:shadow-lg transition-shadow">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-harvest-green/10 flex items-center justify-center text-2xl">3️⃣</div>
+              <h3 className="font-heading font-bold text-foreground mb-2">Prospérez ensemble</h3>
+              <p className="text-sm text-muted-foreground font-body">Recevez des commissions et montez les échelons avec votre communauté.</p>
+            </div>
           </div>
         </div>
       </section>
