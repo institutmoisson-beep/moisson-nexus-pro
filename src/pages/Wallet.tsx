@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet as WalletIcon, ArrowDownCircle, ArrowUpCircle, Copy, RefreshCw } from "lucide-react";
+import { Wallet as WalletIcon, ArrowDownCircle, ArrowUpCircle, Copy, RefreshCw, Send, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -30,32 +30,36 @@ const WalletPage = () => {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState("XOF");
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [depositForm, setDepositForm] = useState({ amount: "", payment_method_id: "", transaction_contact: "", transaction_id_external: "" });
   const [withdrawForm, setWithdrawForm] = useState({ amount: "", payment_method_id: "", transaction_contact: "" });
+  const [transferForm, setTransferForm] = useState({ amount: "", recipient: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [fees, setFees] = useState({ withdrawal_fee_percent: 0, transfer_fee_percent: 0 });
 
   useEffect(() => {
     if (!loading && !user) navigate("/connexion");
   }, [user, loading]);
 
   useEffect(() => {
-    if (user) {
-      loadData();
-      fetchRates();
-    }
+    if (user) { loadData(); fetchRates(); }
   }, [user]);
 
   const loadData = async () => {
-    const [profileRes, txRes, pmRes] = await Promise.all([
+    const [profileRes, txRes, pmRes, feeRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
       supabase.from("transactions").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(50),
       supabase.from("payment_methods").select("*").eq("is_active", true),
+      supabase.from("mlm_config").select("*").in("key", ["withdrawal_fee_percent", "transfer_fee_percent"]),
     ]);
     setProfile(profileRes.data);
     setTransactions(txRes.data || []);
     setPaymentMethods(pmRes.data || []);
+    const feeData: any = {};
+    (feeRes.data || []).forEach((c: any) => { feeData[c.key] = Number(c.value); });
+    setFees({ withdrawal_fee_percent: feeData.withdrawal_fee_percent || 0, transfer_fee_percent: feeData.transfer_fee_percent || 0 });
   };
 
   const fetchRates = async () => {
@@ -63,9 +67,7 @@ const WalletPage = () => {
       const res = await fetch("https://api.exchangerate-api.com/v4/latest/XOF");
       const data = await res.json();
       setExchangeRates(data.rates || {});
-    } catch {
-      setExchangeRates({});
-    }
+    } catch { setExchangeRates({}); }
   };
 
   const convertedBalance = () => {
@@ -77,14 +79,15 @@ const WalletPage = () => {
 
   const getCurrencySymbol = () => CURRENCIES.find(c => c.code === displayCurrency)?.symbol || displayCurrency;
 
+  const selectedDepositMethod = paymentMethods.find(m => m.id === depositForm.payment_method_id);
+  const selectedWithdrawMethod = paymentMethods.find(m => m.id === withdrawForm.payment_method_id);
+
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!depositForm.amount || !depositForm.payment_method_id) { toast.error("Remplissez les champs obligatoires"); return; }
     setSubmitting(true);
     const { error } = await supabase.from("transactions").insert({
-      user_id: user!.id,
-      amount: Number(depositForm.amount),
-      type: "deposit" as const,
+      user_id: user!.id, amount: Number(depositForm.amount), type: "deposit" as const,
       payment_method_id: depositForm.payment_method_id,
       transaction_contact: depositForm.transaction_contact,
       transaction_id_external: depositForm.transaction_id_external,
@@ -100,16 +103,18 @@ const WalletPage = () => {
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!withdrawForm.amount || !withdrawForm.payment_method_id) { toast.error("Remplissez les champs obligatoires"); return; }
-    if (Number(withdrawForm.amount) > Number(profile?.wallet_balance || 0)) { toast.error("Solde insuffisant"); return; }
+    const amount = Number(withdrawForm.amount);
+    if (!amount || !withdrawForm.payment_method_id) { toast.error("Remplissez les champs obligatoires"); return; }
+    const fee = amount * fees.withdrawal_fee_percent / 100;
+    const total = amount + fee;
+    if (total > Number(profile?.wallet_balance || 0)) { toast.error("Solde insuffisant (montant + frais)"); return; }
     setSubmitting(true);
     const { error } = await supabase.from("transactions").insert({
-      user_id: user!.id,
-      amount: Number(withdrawForm.amount),
-      type: "withdrawal" as const,
+      user_id: user!.id, amount, type: "withdrawal" as const,
       payment_method_id: withdrawForm.payment_method_id,
       transaction_contact: withdrawForm.transaction_contact,
-      description: "Demande de retrait",
+      description: `Demande de retrait (frais: ${fee.toLocaleString("fr-FR")} FCFA)`,
+      metadata: { fee, fee_percent: fees.withdrawal_fee_percent },
     });
     setSubmitting(false);
     if (error) { toast.error("Erreur: " + error.message); return; }
@@ -119,7 +124,73 @@ const WalletPage = () => {
     loadData();
   };
 
-  const selectedDepositMethod = paymentMethods.find(m => m.id === depositForm.payment_method_id);
+  const handleTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = Number(transferForm.amount);
+    if (!amount || !transferForm.recipient) { toast.error("Remplissez tous les champs"); return; }
+    const fee = amount * fees.transfer_fee_percent / 100;
+    const total = amount + fee;
+    if (total > Number(profile?.wallet_balance || 0)) { toast.error("Solde insuffisant (montant + frais)"); return; }
+
+    // Find recipient by email or referral code
+    const { data: recipients } = await supabase.from("profiles").select("id, user_id, first_name, last_name, email, referral_code")
+      .or(`email.eq.${transferForm.recipient},referral_code.eq.${transferForm.recipient}`);
+    const recipient = recipients?.[0];
+    if (!recipient) { toast.error("Destinataire introuvable"); return; }
+    if (recipient.user_id === user!.id) { toast.error("Vous ne pouvez pas vous transférer à vous-même"); return; }
+
+    setSubmitting(true);
+    // Debit sender
+    const newSenderBalance = Number(profile.wallet_balance) - total;
+    await supabase.from("profiles").update({ wallet_balance: newSenderBalance }).eq("user_id", user!.id);
+    // Credit recipient
+    const { data: recipientProfile } = await supabase.from("profiles").select("wallet_balance").eq("user_id", recipient.user_id).single();
+    const newRecipientBalance = Number(recipientProfile?.wallet_balance || 0) + amount;
+    await supabase.from("profiles").update({ wallet_balance: newRecipientBalance }).eq("user_id", recipient.user_id);
+    // Transactions
+    await supabase.from("transactions").insert([
+      {
+        user_id: user!.id, amount: total, type: "transfer" as const, status: "approved" as const,
+        description: `Transfert à ${recipient.first_name} ${recipient.last_name} (frais: ${fee.toLocaleString("fr-FR")} FCFA)`,
+        metadata: { recipient_id: recipient.user_id, fee, net_amount: amount },
+      },
+      {
+        user_id: recipient.user_id, amount, type: "transfer" as const, status: "approved" as const,
+        description: `Transfert reçu de ${profile.first_name} ${profile.last_name}`,
+        metadata: { sender_id: user!.id },
+      },
+    ]);
+    setSubmitting(false);
+    toast.success(`${amount.toLocaleString("fr-FR")} FCFA transféré à ${recipient.first_name} !`);
+    setShowTransfer(false);
+    setTransferForm({ amount: "", recipient: "" });
+    loadData();
+  };
+
+  const renderPaymentMethodDetails = (method: any) => {
+    if (!method) return null;
+    return (
+      <div className="bg-secondary rounded-lg p-4">
+        <p className="text-sm font-semibold text-foreground mb-2 font-body">Informations du moyen de paiement :</p>
+        {method.payment_link && (
+          <a href={method.payment_link} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 mb-3 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-body text-sm font-semibold hover:bg-primary/90 transition-colors">
+            <ExternalLink className="w-4 h-4" /> Cliquer pour payer en ligne
+          </a>
+        )}
+        {Object.entries(method.details as Record<string, string>).map(([key, value]) => (
+          <div key={key} className="flex items-center justify-between text-sm font-body mb-1">
+            <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}:</span>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-foreground">{String(value)}</span>
+              <button type="button" onClick={() => { navigator.clipboard.writeText(String(value)); toast.success("Copié !"); }}
+                className="p-1 rounded hover:bg-muted transition-colors"><Copy className="w-3.5 h-3.5 text-muted-foreground" /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   if (loading || !profile) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground font-body">Chargement...</div></div>;
@@ -148,13 +219,17 @@ const WalletPage = () => {
             {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
           </select>
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => { setShowDeposit(true); setShowWithdraw(false); }} className="flex-1 btn-hero !text-sm !py-2.5">
+        <div className="flex gap-3 flex-wrap">
+          <button onClick={() => { setShowDeposit(true); setShowWithdraw(false); setShowTransfer(false); }} className="flex-1 btn-hero !text-sm !py-2.5">
             <ArrowDownCircle className="w-4 h-4 mr-2" /> Recharger
           </button>
-          <button onClick={() => { setShowWithdraw(true); setShowDeposit(false); }}
+          <button onClick={() => { setShowWithdraw(true); setShowDeposit(false); setShowTransfer(false); }}
             className="flex-1 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-all bg-accent text-accent-foreground hover:opacity-90">
             <ArrowUpCircle className="w-4 h-4 mr-2" /> Retirer
+          </button>
+          <button onClick={() => { setShowTransfer(true); setShowDeposit(false); setShowWithdraw(false); }}
+            className="flex-1 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-all bg-harvest-green text-primary-foreground hover:opacity-90">
+            <Send className="w-4 h-4 mr-2" /> Transférer
           </button>
         </div>
       </div>
@@ -177,23 +252,7 @@ const WalletPage = () => {
                 {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.name} ({m.type.replace(/_/g, " ")})</option>)}
               </select>
             </div>
-
-            {selectedDepositMethod && (
-              <div className="bg-secondary rounded-lg p-4">
-                <p className="text-sm font-semibold text-foreground mb-2 font-body">Informations du moyen de paiement :</p>
-                {Object.entries(selectedDepositMethod.details as Record<string, string>).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between text-sm font-body mb-1">
-                    <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}:</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{String(value)}</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText(String(value)); toast.success("Copié !"); }}
-                        className="p-1 rounded hover:bg-muted transition-colors"><Copy className="w-3.5 h-3.5 text-muted-foreground" /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
+            {renderPaymentMethodDetails(selectedDepositMethod)}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Contact / Adresse de la transaction</label>
               <input type="text" value={depositForm.transaction_contact} onChange={e => setDepositForm({...depositForm, transaction_contact: e.target.value})}
@@ -208,9 +267,7 @@ const WalletPage = () => {
               <button type="submit" disabled={submitting} className="flex-1 btn-gold !text-sm !py-2.5 disabled:opacity-50">
                 {submitting ? "Envoi..." : "Valider la demande"}
               </button>
-              <button type="button" onClick={() => setShowDeposit(false)} className="px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary">
-                Annuler
-              </button>
+              <button type="button" onClick={() => setShowDeposit(false)} className="px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary">Annuler</button>
             </div>
           </form>
         </div>
@@ -220,6 +277,12 @@ const WalletPage = () => {
       {showWithdraw && (
         <div className="card-elevated mb-6">
           <h2 className="text-lg font-heading font-semibold text-foreground mb-4">📤 Demande de retrait</h2>
+          {fees.withdrawal_fee_percent > 0 && (
+            <p className="text-xs text-muted-foreground font-body mb-3 bg-secondary rounded-lg p-2">
+              ⚠️ Frais de retrait: <span className="font-semibold text-foreground">{fees.withdrawal_fee_percent}%</span>
+              {withdrawForm.amount && <> — Frais: <span className="font-semibold">{(Number(withdrawForm.amount) * fees.withdrawal_fee_percent / 100).toLocaleString("fr-FR")} FCFA</span></>}
+            </p>
+          )}
           <form onSubmit={handleWithdraw} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Montant (FCFA)</label>
@@ -235,6 +298,7 @@ const WalletPage = () => {
                 {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.name} ({m.type.replace(/_/g, " ")})</option>)}
               </select>
             </div>
+            {renderPaymentMethodDetails(selectedWithdrawMethod)}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Contact / Adresse de réception</label>
               <input type="text" required value={withdrawForm.transaction_contact} onChange={e => setWithdrawForm({...withdrawForm, transaction_contact: e.target.value})}
@@ -244,9 +308,39 @@ const WalletPage = () => {
               <button type="submit" disabled={submitting} className="flex-1 btn-gold !text-sm !py-2.5 disabled:opacity-50">
                 {submitting ? "Envoi..." : "Valider la demande de retrait"}
               </button>
-              <button type="button" onClick={() => setShowWithdraw(false)} className="px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary">
-                Annuler
+              <button type="button" onClick={() => setShowWithdraw(false)} className="px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary">Annuler</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Transfer Form */}
+      {showTransfer && (
+        <div className="card-elevated mb-6">
+          <h2 className="text-lg font-heading font-semibold text-foreground mb-4">📲 Transférer de l'argent</h2>
+          {fees.transfer_fee_percent > 0 && (
+            <p className="text-xs text-muted-foreground font-body mb-3 bg-secondary rounded-lg p-2">
+              ⚠️ Frais de transfert: <span className="font-semibold text-foreground">{fees.transfer_fee_percent}%</span>
+              {transferForm.amount && <> — Frais: <span className="font-semibold">{(Number(transferForm.amount) * fees.transfer_fee_percent / 100).toLocaleString("fr-FR")} FCFA</span></>}
+            </p>
+          )}
+          <form onSubmit={handleTransfer} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Email ou Code Moissonneur du destinataire</label>
+              <input type="text" required value={transferForm.recipient} onChange={e => setTransferForm({...transferForm, recipient: e.target.value})}
+                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body" placeholder="email@example.com ou MOI-XXXXXX" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Montant (FCFA)</label>
+              <input type="number" required value={transferForm.amount} onChange={e => setTransferForm({...transferForm, amount: e.target.value})}
+                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body" placeholder="Ex: 5000" />
+              <p className="text-xs text-muted-foreground mt-1 font-body">Solde: {Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA</p>
+            </div>
+            <div className="flex gap-3">
+              <button type="submit" disabled={submitting} className="flex-1 btn-gold !text-sm !py-2.5 disabled:opacity-50">
+                {submitting ? "Envoi..." : "Envoyer"}
               </button>
+              <button type="button" onClick={() => setShowTransfer(false)} className="px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary">Annuler</button>
             </div>
           </form>
         </div>
@@ -269,8 +363,8 @@ const WalletPage = () => {
                 <tr key={tx.id} className="border-b border-border/50">
                   <td className="py-2 px-3">{new Date(tx.created_at).toLocaleDateString("fr-FR")}</td>
                   <td className="py-2 px-3 capitalize">{tx.type.replace(/_/g, " ")}</td>
-                  <td className={`py-2 px-3 text-right font-semibold ${["deposit", "commission", "bonus", "admin_credit"].includes(tx.type) ? "text-harvest-green" : "text-destructive"}`}>
-                    {["deposit", "commission", "bonus", "admin_credit"].includes(tx.type) ? "+" : "-"}{Number(tx.amount).toLocaleString("fr-FR")} FCFA
+                  <td className={`py-2 px-3 text-right font-semibold ${["deposit", "commission", "bonus", "admin_credit"].includes(tx.type) ? "text-harvest-green" : tx.type === "transfer" && tx.description?.includes("reçu") ? "text-harvest-green" : "text-destructive"}`}>
+                    {["deposit", "commission", "bonus", "admin_credit"].includes(tx.type) || (tx.type === "transfer" && tx.description?.includes("reçu")) ? "+" : "-"}{Number(tx.amount).toLocaleString("fr-FR")} FCFA
                   </td>
                   <td className="py-2 px-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
