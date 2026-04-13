@@ -26,8 +26,8 @@ const HeroSection = () => {
             <a href="#vision" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors font-body text-sm">
               Notre Vision
             </a>
-            <a href="#opportunite" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors font-body text-sm">
-              Opportunité
+            <a href="#solidarite" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors font-body text-sm">
+              Solidarité
             </a>
             <Link to="/stand" className="text-primary-foreground/80 hover:text-primary-foreground transition-colors font-body text-sm">
               Stand Partenaires

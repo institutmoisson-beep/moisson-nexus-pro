@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, MapPin, Download, ChevronLeft, ChevronRight, ArrowLeft, Building2 } from "lucide-react";
+import { ShoppingCart, MapPin, Download, ChevronLeft, ChevronRight, ArrowLeft, Building2, X } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { generateGuaranteeContract } from "@/lib/generateContract";
@@ -14,6 +14,7 @@ const PackDetailPage = () => {
   const [pack, setPack] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [imgIndex, setImgIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showPurchase, setShowPurchase] = useState(false);
   const [deliveryForm, setDeliveryForm] = useState({ address: "", city: "", country: "", phone: "", street: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -46,6 +47,10 @@ const PackDetailPage = () => {
     if (Number(profile.wallet_balance) < Number(pack.price)) {
       toast.error("Solde insuffisant ! Rechargez votre portefeuille."); return;
     }
+    // For MLM packs, check if already active
+    if (pack.is_mlm_pack && !profile.is_mlm_active) {
+      // First MLM pack purchase - activate MLM
+    }
     setSubmitting(true);
 
     const { error: orderError } = await supabase.from("pack_orders").insert({
@@ -57,19 +62,25 @@ const PackDetailPage = () => {
     if (orderError) { toast.error("Erreur: " + orderError.message); setSubmitting(false); return; }
 
     const newBalance = Number(profile.wallet_balance) - Number(pack.price);
-    await supabase.from("profiles").update({
-      wallet_balance: newBalance, is_mlm_active: true,
+    const updateData: any = {
+      wallet_balance: newBalance,
       address: deliveryForm.address, city: deliveryForm.city, street: deliveryForm.street,
-    }).eq("user_id", user!.id);
+    };
+    if (pack.is_mlm_pack) updateData.is_mlm_active = true;
+    await supabase.from("profiles").update(updateData).eq("user_id", user!.id);
 
+    // Record transaction
     await supabase.from("transactions").insert({
       user_id: user!.id, amount: pack.price, type: "pack_purchase" as const,
-      status: "approved" as const, description: `Achat pack: ${pack.name}`,
+      status: "approved" as const, description: `Achat ${pack.is_mlm_pack ? "pack MLM" : "produit"}: ${pack.name}`,
     });
 
-    await distributeCommissions(user!.id, Number(pack.price), pack.id);
+    // Distribute commissions if MLM pack
+    if (pack.is_mlm_pack) {
+      await distributeCommissions(user!.id, Number(pack.price), pack.id);
+    }
 
-    toast.success("Pack acheté avec succès ! 🌾");
+    toast.success("Achat effectué avec succès ! 🌾");
     setShowPurchase(false);
     setSubmitting(false);
     loadData();
@@ -117,20 +128,21 @@ const PackDetailPage = () => {
         {/* Images */}
         <div>
           {images.length > 0 ? (
-            <div className="relative rounded-xl overflow-hidden bg-secondary aspect-square mb-3">
+            <div className="relative rounded-xl overflow-hidden bg-secondary aspect-square mb-3 cursor-pointer" onClick={() => setLightboxOpen(true)}>
               <img src={images[imgIndex]} alt={pack.name} className="w-full h-full object-cover" />
               {images.length > 1 && (
                 <>
-                  <button onClick={() => setImgIndex((imgIndex - 1 + images.length) % images.length)}
+                  <button onClick={e => { e.stopPropagation(); setImgIndex((imgIndex - 1 + images.length) % images.length); }}
                     className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-foreground/50 text-background rounded-full">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <button onClick={() => setImgIndex((imgIndex + 1) % images.length)}
+                  <button onClick={e => { e.stopPropagation(); setImgIndex((imgIndex + 1) % images.length); }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-foreground/50 text-background rounded-full">
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </>
               )}
+              <p className="absolute bottom-2 right-2 text-xs bg-foreground/50 text-background px-2 py-1 rounded font-body">Cliquer pour agrandir</p>
             </div>
           ) : (
             <div className="rounded-xl bg-secondary aspect-square flex items-center justify-center text-muted-foreground text-4xl">📦</div>
@@ -147,7 +159,10 @@ const PackDetailPage = () => {
 
         {/* Details */}
         <div>
-          <h1 className="text-3xl font-heading font-bold text-foreground mb-2">{pack.name}</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-3xl font-heading font-bold text-foreground">{pack.name}</h1>
+            {!pack.is_mlm_pack && <span className="text-xs bg-accent/20 text-accent-foreground px-2 py-0.5 rounded">Produit</span>}
+          </div>
           {pack.partner_companies?.name && (
             <p className="flex items-center gap-2 text-muted-foreground font-body text-sm mb-4">
               <Building2 className="w-4 h-4" /> par {pack.partner_companies.name}
@@ -169,7 +184,7 @@ const PackDetailPage = () => {
             </div>
           )}
 
-          {commissions.length > 0 && (
+          {commissions.length > 0 && pack.is_mlm_pack && (
             <div className="bg-secondary rounded-lg p-4 mb-4">
               <h3 className="font-heading font-semibold text-foreground mb-2">💰 Commissions de parrainage</h3>
               <div className="space-y-1">
@@ -189,7 +204,7 @@ const PackDetailPage = () => {
 
           <div className="space-y-3">
             <button onClick={() => setShowPurchase(true)} className="btn-gold w-full !py-3">
-              <ShoppingCart className="w-5 h-5 mr-2" /> Acheter ce pack
+              <ShoppingCart className="w-5 h-5 mr-2" /> Acheter
             </button>
             <button onClick={() => generateGuaranteeContract(`${profile.first_name} ${profile.last_name}`, pack.name, Number(pack.price))}
               className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-input text-sm font-body text-muted-foreground hover:bg-secondary transition-colors">
@@ -198,6 +213,28 @@ const PackDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Lightbox */}
+      {lightboxOpen && images.length > 0 && (
+        <div className="fixed inset-0 bg-foreground/90 flex items-center justify-center z-50" onClick={() => setLightboxOpen(false)}>
+          <button className="absolute top-4 right-4 p-2 text-background hover:text-primary-foreground z-50" onClick={() => setLightboxOpen(false)}>
+            <X className="w-8 h-8" />
+          </button>
+          <img src={images[imgIndex]} alt={pack.name} className="max-w-[90vw] max-h-[90vh] object-contain" onClick={e => e.stopPropagation()} />
+          {images.length > 1 && (
+            <>
+              <button onClick={e => { e.stopPropagation(); setImgIndex((imgIndex - 1 + images.length) % images.length); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-foreground/50 text-background rounded-full">
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button onClick={e => { e.stopPropagation(); setImgIndex((imgIndex + 1) % images.length); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-foreground/50 text-background rounded-full">
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Purchase Modal */}
       {showPurchase && (
