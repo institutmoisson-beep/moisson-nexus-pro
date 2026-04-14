@@ -2,13 +2,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { LayoutDashboard, Wallet, Package, Users, User, Shield, LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase } from "lucide-react";
+import {
+  LayoutDashboard, Wallet, Package, Users, User, Shield,
+  LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase, Flame
+} from "lucide-react";
 import InstallPWA from "@/components/InstallPWA";
 import logo from "@/assets/logo-moisson.png";
 
 const NAV_ITEMS = [
   { path: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { path: "/portefeuille", label: "Portefeuille", icon: Wallet },
+  { path: "/msn-wallet", label: "MSN Coins 🔥", icon: Flame },
   { path: "/packs", label: "Packs", icon: Package },
   { path: "/commandes", label: "Commandes", icon: ShoppingBag },
   { path: "/reseau", label: "Mon Réseau", icon: Users },
@@ -70,7 +74,11 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             {NAV_ITEMS.map(item => (
               <Link key={item.path} to={item.path}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body transition-colors ${
-                  location.pathname === item.path ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  location.pathname === item.path
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : item.path === "/msn-wallet"
+                    ? "text-gold hover:bg-gold/10 hover:text-gold font-medium"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}>
                 <item.icon className="w-4 h-4" /> {item.label}
               </Link>
@@ -104,7 +112,11 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             {NAV_ITEMS.map(item => (
               <Link key={item.path} to={item.path} onClick={() => setMobileMenu(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body transition-colors ${
-                  location.pathname === item.path ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-secondary"
+                  location.pathname === item.path
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : item.path === "/msn-wallet"
+                    ? "text-gold hover:bg-gold/10 font-medium"
+                    : "text-muted-foreground hover:bg-secondary"
                 }`}>
                 <item.icon className="w-4 h-4" /> {item.label}
               </Link>
