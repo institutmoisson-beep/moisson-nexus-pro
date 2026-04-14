@@ -18,6 +18,7 @@ import Partners from "./pages/Partners";
 import AdminDashboard from "./pages/AdminDashboard";
 import MoissonneursPros from "./pages/MoissonneursPros";
 import Stand from "./pages/Stand";
+import MSNWallet from "./pages/MSNWallet";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/inscription" element={<Register />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/portefeuille" element={<Wallet />} />
+            <Route path="/msn-wallet" element={<MSNWallet />} />
             <Route path="/packs" element={<Packs />} />
             <Route path="/packs/:id" element={<PackDetail />} />
             <Route path="/commandes" element={<Orders />} />
