@@ -202,6 +202,31 @@ const WalletPage = () => {
     );
   };
 
+  const handleConvertCoins = async (tier: { coins: number; dollars: number }) => {
+    if (msnCoins < tier.coins) { toast.error(`Vous n'avez que ${msnCoins} coins, il en faut ${tier.coins}`); return; }
+    setConvertingCoins(true);
+    // Mark coins as converted
+    const { data: userCoins } = await supabase.from("msn_coins").select("id").eq("user_id", user!.id).eq("is_converted", false).limit(tier.coins);
+    if (userCoins) {
+      for (const c of userCoins) {
+        await supabase.from("msn_coins").update({ is_converted: true } as any).eq("id", c.id);
+      }
+    }
+    // Record conversion
+    await supabase.from("msn_conversions").insert({ user_id: user!.id, coins_used: tier.coins, dollar_amount: tier.dollars } as any);
+    // Credit wallet (convert $ to FCFA approx 600)
+    const fcfaAmount = tier.dollars * 600;
+    const newBalance = Number(profile.wallet_balance) + fcfaAmount;
+    await supabase.from("profiles").update({ wallet_balance: newBalance }).eq("user_id", user!.id);
+    await supabase.from("transactions").insert({
+      user_id: user!.id, amount: fcfaAmount, type: "bonus" as const, status: "approved" as const,
+      description: `Conversion MSN: ${tier.coins} coins → ${tier.dollars}$ (${fcfaAmount.toLocaleString("fr-FR")} FCFA)`,
+    });
+    toast.success(`🔥 ${tier.coins} MSN Coins convertis en ${tier.dollars}$ !`);
+    setConvertingCoins(false);
+    loadData();
+  };
+
   if (loading || !profile) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground font-body">Chargement...</div></div>;
   }
