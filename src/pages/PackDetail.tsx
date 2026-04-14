@@ -80,6 +80,9 @@ const PackDetailPage = () => {
       await distributeCommissions(user!.id, Number(pack.price), pack.id);
     }
 
+    // Award MSN coins to upline
+    await supabase.rpc("award_msn_coins", { _buyer_user_id: user!.id, _order_id: orderData?.id || "" });
+
     toast.success("Achat effectué avec succès ! 🌾");
     setShowPurchase(false);
     setSubmitting(false);
