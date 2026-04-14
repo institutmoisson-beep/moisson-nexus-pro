@@ -269,6 +269,32 @@ const WalletPage = () => {
         </div>
       </div>
 
+      {/* MSN Coins Section */}
+      {msnCoins > 0 && (
+        <div className="card-elevated mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Flame className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-body">MSN Coins disponibles</p>
+              <p className="text-2xl font-heading font-bold text-foreground">{msnCoins} <Coins className="w-5 h-5 inline text-primary" /></p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground font-body mb-3">Convertissez vos MSN Coins en argent — chaque effort dans votre réseau compte ! 🔥</p>
+          <div className="flex gap-2 flex-wrap">
+            {(msnConfig.conversion_tiers || []).map((tier: any, i: number) => (
+              <button key={i} onClick={() => handleConvertCoins(tier)} disabled={convertingCoins || msnCoins < tier.coins}
+                className={`px-4 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${
+                  msnCoins >= tier.coins ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-secondary text-muted-foreground cursor-not-allowed"
+                }`}>
+                {tier.coins} coins → {tier.dollars}$
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Deposit Form */}
       {showDeposit && (
         <div className="card-elevated mb-6">
