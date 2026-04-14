@@ -24,7 +24,7 @@ const AdminMSN = () => {
     const [cfgRes, coinsRes, recentRes] = await Promise.all([
       supabase.from("msn_config").select("*"),
       supabase.from("msn_coins").select("id, is_converted"),
-      supabase.from("msn_coins").select("*, profiles!msn_coins_user_id_fkey(first_name, last_name)").order("created_at", { ascending: false }).limit(20),
+      supabase.from("msn_coins").select("*").order("created_at", { ascending: false }).limit(20),
     ]);
 
     const cfgMap: Record<string, any> = {};
@@ -202,7 +202,7 @@ const AdminMSN = () => {
               {recentCoins.map((c: any) => (
                 <tr key={c.id} className="border-b border-border/50">
                   <td className="py-2 px-3 text-xs">{new Date(c.created_at).toLocaleDateString("fr-FR")}</td>
-                  <td className="py-2 px-3">{(c as any).profiles?.first_name || "—"} {(c as any).profiles?.last_name || ""}</td>
+                  <td className="py-2 px-3">{c.user_id?.substring(0, 8)}...</td>
                   <td className="py-2 px-3 text-center font-bold text-primary">{c.coins}</td>
                   <td className="py-2 px-3 text-center">{c.is_converted ? "✅" : "⏳"}</td>
                 </tr>
