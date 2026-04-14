@@ -86,6 +86,90 @@ export type Database = {
         }
         Relationships: []
       }
+      msn_coins: {
+        Row: {
+          coins: number
+          created_at: string
+          id: string
+          is_converted: boolean
+          source_order_id: string | null
+          source_type: string
+          source_user_id: string | null
+          user_id: string
+        }
+        Insert: {
+          coins?: number
+          created_at?: string
+          id?: string
+          is_converted?: boolean
+          source_order_id?: string | null
+          source_type?: string
+          source_user_id?: string | null
+          user_id: string
+        }
+        Update: {
+          coins?: number
+          created_at?: string
+          id?: string
+          is_converted?: boolean
+          source_order_id?: string | null
+          source_type?: string
+          source_user_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      msn_config: {
+        Row: {
+          id: string
+          key: string
+          label: string | null
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          label?: string | null
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          label?: string | null
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      msn_conversions: {
+        Row: {
+          coins_used: number
+          created_at: string
+          dollar_amount: number
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          coins_used: number
+          created_at?: string
+          dollar_amount: number
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          coins_used?: number
+          created_at?: string
+          dollar_amount?: number
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pack_commissions: {
         Row: {
           created_at: string
@@ -572,6 +656,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_msn_coins: {
+        Args: { _buyer_user_id: string; _order_id: string }
+        Returns: undefined
+      }
       distribute_commissions: {
         Args: {
           _buyer_user_id: string
