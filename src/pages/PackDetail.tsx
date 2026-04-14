@@ -53,12 +53,12 @@ const PackDetailPage = () => {
     }
     setSubmitting(true);
 
-    const { error: orderError } = await supabase.from("pack_orders").insert({
+    const { data: orderData, error: orderError } = await supabase.from("pack_orders").insert({
       user_id: user!.id, pack_id: pack.id, amount_paid: pack.price,
       delivery_address: deliveryForm.address, delivery_city: deliveryForm.city,
       delivery_country: deliveryForm.country, delivery_phone: deliveryForm.phone,
       delivery_street: deliveryForm.street,
-    });
+    }).select("id").single();
     if (orderError) { toast.error("Erreur: " + orderError.message); setSubmitting(false); return; }
 
     const newBalance = Number(profile.wallet_balance) - Number(pack.price);
@@ -79,6 +79,9 @@ const PackDetailPage = () => {
     if (pack.is_mlm_pack) {
       await distributeCommissions(user!.id, Number(pack.price), pack.id);
     }
+
+    // Award MSN coins to upline
+    await supabase.rpc("award_msn_coins", { _buyer_user_id: user!.id, _order_id: orderData?.id || "" });
 
     toast.success("Achat effectué avec succès ! 🌾");
     setShowPurchase(false);

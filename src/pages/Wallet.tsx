@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet as WalletIcon, ArrowDownCircle, ArrowUpCircle, Copy, RefreshCw, Send, ExternalLink } from "lucide-react";
+import { Wallet as WalletIcon, ArrowDownCircle, ArrowUpCircle, Copy, RefreshCw, Send, ExternalLink, Flame, Coins } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -38,6 +38,9 @@ const WalletPage = () => {
   const [transferForm, setTransferForm] = useState({ amount: "", recipient: "" });
   const [submitting, setSubmitting] = useState(false);
   const [fees, setFees] = useState({ withdrawal_fee_percent: 0, transfer_fee_percent: 0 });
+  const [msnCoins, setMsnCoins] = useState(0);
+  const [msnConfig, setMsnConfig] = useState<any>({});
+  const [convertingCoins, setConvertingCoins] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/connexion");
@@ -48,11 +51,13 @@ const WalletPage = () => {
   }, [user]);
 
   const loadData = async () => {
-    const [profileRes, txRes, pmRes, feeRes] = await Promise.all([
+    const [profileRes, txRes, pmRes, feeRes, coinsRes, msnCfgRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
       supabase.from("transactions").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(50),
       supabase.from("payment_methods").select("*").eq("is_active", true),
       supabase.from("mlm_config").select("*").in("key", ["withdrawal_fee_percent", "transfer_fee_percent"]),
+      supabase.from("msn_coins").select("coins, is_converted").eq("user_id", user!.id).eq("is_converted", false),
+      supabase.from("msn_config").select("*"),
     ]);
     setProfile(profileRes.data);
     setTransactions(txRes.data || []);
@@ -60,6 +65,11 @@ const WalletPage = () => {
     const feeData: any = {};
     (feeRes.data || []).forEach((c: any) => { feeData[c.key] = Number(c.value); });
     setFees({ withdrawal_fee_percent: feeData.withdrawal_fee_percent || 0, transfer_fee_percent: feeData.transfer_fee_percent || 0 });
+    const totalCoins = (coinsRes.data || []).reduce((s: number, c: any) => s + c.coins, 0);
+    setMsnCoins(totalCoins);
+    const cfgMap: Record<string, any> = {};
+    (msnCfgRes.data || []).forEach((r: any) => { cfgMap[r.key] = r.value; });
+    setMsnConfig(cfgMap);
   };
 
   const fetchRates = async () => {
@@ -192,6 +202,31 @@ const WalletPage = () => {
     );
   };
 
+  const handleConvertCoins = async (tier: { coins: number; dollars: number }) => {
+    if (msnCoins < tier.coins) { toast.error(`Vous n'avez que ${msnCoins} coins, il en faut ${tier.coins}`); return; }
+    setConvertingCoins(true);
+    // Mark coins as converted
+    const { data: userCoins } = await supabase.from("msn_coins").select("id").eq("user_id", user!.id).eq("is_converted", false).limit(tier.coins);
+    if (userCoins) {
+      for (const c of userCoins) {
+        await supabase.from("msn_coins").update({ is_converted: true } as any).eq("id", c.id);
+      }
+    }
+    // Record conversion
+    await supabase.from("msn_conversions").insert({ user_id: user!.id, coins_used: tier.coins, dollar_amount: tier.dollars } as any);
+    // Credit wallet (convert $ to FCFA approx 600)
+    const fcfaAmount = tier.dollars * 600;
+    const newBalance = Number(profile.wallet_balance) + fcfaAmount;
+    await supabase.from("profiles").update({ wallet_balance: newBalance }).eq("user_id", user!.id);
+    await supabase.from("transactions").insert({
+      user_id: user!.id, amount: fcfaAmount, type: "bonus" as const, status: "approved" as const,
+      description: `Conversion MSN: ${tier.coins} coins → ${tier.dollars}$ (${fcfaAmount.toLocaleString("fr-FR")} FCFA)`,
+    });
+    toast.success(`🔥 ${tier.coins} MSN Coins convertis en ${tier.dollars}$ !`);
+    setConvertingCoins(false);
+    loadData();
+  };
+
   if (loading || !profile) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground font-body">Chargement...</div></div>;
   }
@@ -233,6 +268,32 @@ const WalletPage = () => {
           </button>
         </div>
       </div>
+
+      {/* MSN Coins Section */}
+      {msnCoins > 0 && (
+        <div className="card-elevated mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Flame className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground font-body">MSN Coins disponibles</p>
+              <p className="text-2xl font-heading font-bold text-foreground">{msnCoins} <Coins className="w-5 h-5 inline text-primary" /></p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground font-body mb-3">Convertissez vos MSN Coins en argent — chaque effort dans votre réseau compte ! 🔥</p>
+          <div className="flex gap-2 flex-wrap">
+            {(msnConfig.conversion_tiers || []).map((tier: any, i: number) => (
+              <button key={i} onClick={() => handleConvertCoins(tier)} disabled={convertingCoins || msnCoins < tier.coins}
+                className={`px-4 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${
+                  msnCoins >= tier.coins ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-secondary text-muted-foreground cursor-not-allowed"
+                }`}>
+                {tier.coins} coins → {tier.dollars}$
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Deposit Form */}
       {showDeposit && (
