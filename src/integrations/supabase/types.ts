@@ -572,6 +572,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      distribute_commissions: {
+        Args: {
+          _buyer_user_id: string
+          _pack_id: string
+          _pack_name: string
+          _pack_price: number
+        }
+        Returns: undefined
+      }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {

@@ -87,29 +87,12 @@ const PackDetailPage = () => {
   };
 
   const distributeCommissions = async (buyerId: string, packPrice: number, packId: string) => {
-    const { data: packComms } = await supabase.from("pack_commissions").select("*").eq("pack_id", packId).order("level_number");
-    if (!packComms || packComms.length === 0) return;
-
-    let currentProfileRes = await supabase.from("profiles").select("referred_by, user_id").eq("user_id", buyerId).single();
-    let currentProfile = currentProfileRes.data;
-    let level = 0;
-
-    while (currentProfile?.referred_by && level < packComms.length) {
-      const sponsorRes = await supabase.from("profiles").select("*").eq("id", currentProfile.referred_by).single();
-      const sponsor = sponsorRes.data;
-      if (!sponsor || !sponsor.is_mlm_active) break;
-
-      const commissionAmount = (packPrice * packComms[level].percentage) / 100;
-      await supabase.from("profiles").update({ wallet_balance: Number(sponsor.wallet_balance) + commissionAmount }).eq("id", sponsor.id);
-      await supabase.from("transactions").insert({
-        user_id: sponsor.user_id, amount: commissionAmount, type: "commission" as const,
-        status: "approved" as const, description: `Commission niveau ${level + 1} - ${pack?.name}`,
-        metadata: { buyer_id: buyerId, level: level + 1, pack_price: packPrice, pack_id: packId },
-      });
-
-      currentProfile = { referred_by: sponsor.referred_by, user_id: sponsor.user_id };
-      level++;
-    }
+    await supabase.rpc("distribute_commissions", {
+      _buyer_user_id: buyerId,
+      _pack_id: packId,
+      _pack_name: pack?.name || "",
+      _pack_price: packPrice,
+    });
   };
 
   if (loading || !pack || !profile) {

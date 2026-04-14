@@ -24,10 +24,36 @@ import AdminFees from "@/components/admin/AdminFees";
 
 type AdminTab = "overview" | "users" | "packs" | "sectors" | "partners" | "transactions" | "payments" | "commissions" | "bonuses" | "pro_directory" | "orders" | "fees";
 
+// Map staff roles to the tabs they can access
+const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
+  financier: ["overview", "transactions", "payments", "commissions", "bonuses", "fees"],
+  gestion_packs: ["overview", "packs", "sectors", "orders", "commissions"],
+  gestion_stand: ["overview", "partners", "orders"],
+  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees"],
+  commercial: ["overview", "users", "pro_directory", "orders"],
+  communication: ["overview", "partners", "pro_directory"],
+};
+
+const ALL_TABS: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
+  { key: "overview", label: "Vue d'ensemble", icon: <TrendingUp className="w-4 h-4" /> },
+  { key: "users", label: "Utilisateurs", icon: <Users className="w-4 h-4" /> },
+  { key: "pro_directory", label: "Moissonneurs Pros", icon: <UserCheck className="w-4 h-4" /> },
+  { key: "packs", label: "Packs", icon: <Package className="w-4 h-4" /> },
+  { key: "sectors", label: "Secteurs", icon: <FolderOpen className="w-4 h-4" /> },
+  { key: "partners", label: "Partenaires", icon: <Building2 className="w-4 h-4" /> },
+  { key: "orders", label: "Commandes", icon: <ShoppingBag className="w-4 h-4" /> },
+  { key: "transactions", label: "Transactions", icon: <CreditCard className="w-4 h-4" /> },
+  { key: "payments", label: "Moyens de paiement", icon: <Wallet className="w-4 h-4" /> },
+  { key: "commissions", label: "Commissions", icon: <TrendingUp className="w-4 h-4" /> },
+  { key: "bonuses", label: "Bonus carrière", icon: <Award className="w-4 h-4" /> },
+  { key: "fees", label: "Frais & Config", icon: <Settings2 className="w-4 h-4" /> },
+];
+
 const AdminDashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [staffRoles, setStaffRoles] = useState<string[]>([]);
   const [checkingRole, setCheckingRole] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,32 +61,38 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (!loading && !user) { navigate("/connexion"); return; }
     if (user) {
-      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => {
-        if (!data) { toast.error("Accès refusé"); navigate("/dashboard"); }
-        else setIsAdmin(true);
+      Promise.all([
+        supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+        supabase.from("staff_roles").select("role").eq("user_id", user.id),
+      ]).then(([adminRes, staffRes]) => {
+        const admin = !!adminRes.data;
+        const roles = (staffRes.data || []).map((r: any) => r.role);
+        if (!admin && roles.length === 0) {
+          toast.error("Accès refusé");
+          navigate("/dashboard");
+        } else {
+          setIsAdmin(admin);
+          setStaffRoles(roles);
+        }
         setCheckingRole(false);
       });
     }
   }, [user, loading, navigate]);
 
-  if (loading || checkingRole || !isAdmin) {
+  if (loading || checkingRole || (!isAdmin && staffRoles.length === 0)) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground font-body">Vérification des droits...</div></div>;
   }
 
-  const tabs: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
-    { key: "overview", label: "Vue d'ensemble", icon: <TrendingUp className="w-4 h-4" /> },
-    { key: "users", label: "Utilisateurs", icon: <Users className="w-4 h-4" /> },
-    { key: "pro_directory", label: "Moissonneurs Pros", icon: <UserCheck className="w-4 h-4" /> },
-    { key: "packs", label: "Packs", icon: <Package className="w-4 h-4" /> },
-    { key: "sectors", label: "Secteurs", icon: <FolderOpen className="w-4 h-4" /> },
-    { key: "partners", label: "Partenaires", icon: <Building2 className="w-4 h-4" /> },
-    { key: "orders", label: "Commandes", icon: <ShoppingBag className="w-4 h-4" /> },
-    { key: "transactions", label: "Transactions", icon: <CreditCard className="w-4 h-4" /> },
-    { key: "payments", label: "Moyens de paiement", icon: <Wallet className="w-4 h-4" /> },
-    { key: "commissions", label: "Commissions", icon: <TrendingUp className="w-4 h-4" /> },
-    { key: "bonuses", label: "Bonus carrière", icon: <Award className="w-4 h-4" /> },
-    { key: "fees", label: "Frais & Config", icon: <Settings2 className="w-4 h-4" /> },
-  ];
+  // Admin sees all tabs, staff sees only their allowed tabs
+  const allowedTabs = isAdmin
+    ? ALL_TABS
+    : ALL_TABS.filter(t => {
+        const allowed = new Set<AdminTab>();
+        staffRoles.forEach(role => {
+          (STAFF_TAB_ACCESS[role] || []).forEach(tab => allowed.add(tab));
+        });
+        return allowed.has(t.key);
+      });
 
   const handleTabClick = (key: AdminTab) => {
     setActiveTab(key);
@@ -76,7 +108,9 @@ const AdminDashboard = () => {
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <img src={logo} alt="Institut Moisson" className="w-8 h-8" width={32} height={32} />
-            <span className="font-heading text-lg font-bold text-foreground">Admin Panel</span>
+            <span className="font-heading text-lg font-bold text-foreground">
+              {isAdmin ? "Admin Panel" : "Gestion"}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/dashboard")} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-body">
@@ -92,7 +126,7 @@ const AdminDashboard = () => {
       <div className="flex relative">
         <aside className="w-56 min-h-[calc(100vh-57px)] border-r border-border bg-card p-3 hidden md:block shrink-0">
           <nav className="space-y-0.5">
-            {tabs.map(tab => (
+            {allowedTabs.map(tab => (
               <button key={tab.key} onClick={() => handleTabClick(tab.key)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-body transition-all ${
                   activeTab === tab.key ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -108,7 +142,7 @@ const AdminDashboard = () => {
             <div className="absolute inset-0 bg-foreground/30" onClick={() => setSidebarOpen(false)} />
             <aside className="relative w-64 h-full bg-card border-r border-border p-3 overflow-y-auto">
               <nav className="space-y-0.5">
-                {tabs.map(tab => (
+                {allowedTabs.map(tab => (
                   <button key={tab.key} onClick={() => handleTabClick(tab.key)}
                     className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-body transition-all ${
                       activeTab === tab.key ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
