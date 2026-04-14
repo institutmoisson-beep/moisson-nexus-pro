@@ -21,15 +21,16 @@ import AdminSectors from "@/components/admin/AdminSectors";
 import AdminProDirectory from "@/components/admin/AdminProDirectory";
 import AdminOrders from "@/components/admin/AdminOrders";
 import AdminFees from "@/components/admin/AdminFees";
+import AdminMSN from "@/components/admin/AdminMSN";
 
-type AdminTab = "overview" | "users" | "packs" | "sectors" | "partners" | "transactions" | "payments" | "commissions" | "bonuses" | "pro_directory" | "orders" | "fees";
+type AdminTab = "overview" | "users" | "packs" | "sectors" | "partners" | "transactions" | "payments" | "commissions" | "bonuses" | "pro_directory" | "orders" | "fees" | "msn_plan";
 
 // Map staff roles to the tabs they can access
 const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
   financier: ["overview", "transactions", "payments", "commissions", "bonuses", "fees"],
   gestion_packs: ["overview", "packs", "sectors", "orders", "commissions"],
   gestion_stand: ["overview", "partners", "orders"],
-  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees"],
+  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan"],
   commercial: ["overview", "users", "pro_directory", "orders"],
   communication: ["overview", "partners", "pro_directory"],
 };
@@ -47,6 +48,7 @@ const ALL_TABS: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
   { key: "commissions", label: "Commissions", icon: <TrendingUp className="w-4 h-4" /> },
   { key: "bonuses", label: "Bonus carrière", icon: <Award className="w-4 h-4" /> },
   { key: "fees", label: "Frais & Config", icon: <Settings2 className="w-4 h-4" /> },
+  { key: "msn_plan", label: "Plan MSN 🔥", icon: <TrendingUp className="w-4 h-4" /> },
 ];
 
 const AdminDashboard = () => {
@@ -168,6 +170,7 @@ const AdminDashboard = () => {
           {activeTab === "commissions" && <AdminCommissions />}
           {activeTab === "bonuses" && <AdminBonuses />}
           {activeTab === "fees" && <AdminFees />}
+          {activeTab === "msn_plan" && <AdminMSN />}
         </main>
       </div>
     </div>
