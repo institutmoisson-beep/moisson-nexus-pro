@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet as WalletIcon, ArrowDownCircle, ArrowUpCircle, Copy, RefreshCw, Send, ExternalLink } from "lucide-react";
+import { Wallet as WalletIcon, ArrowDownCircle, ArrowUpCircle, Copy, RefreshCw, Send, ExternalLink, Flame, Coins } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -38,6 +38,9 @@ const WalletPage = () => {
   const [transferForm, setTransferForm] = useState({ amount: "", recipient: "" });
   const [submitting, setSubmitting] = useState(false);
   const [fees, setFees] = useState({ withdrawal_fee_percent: 0, transfer_fee_percent: 0 });
+  const [msnCoins, setMsnCoins] = useState(0);
+  const [msnConfig, setMsnConfig] = useState<any>({});
+  const [convertingCoins, setConvertingCoins] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/connexion");
@@ -48,11 +51,13 @@ const WalletPage = () => {
   }, [user]);
 
   const loadData = async () => {
-    const [profileRes, txRes, pmRes, feeRes] = await Promise.all([
+    const [profileRes, txRes, pmRes, feeRes, coinsRes, msnCfgRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
       supabase.from("transactions").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(50),
       supabase.from("payment_methods").select("*").eq("is_active", true),
       supabase.from("mlm_config").select("*").in("key", ["withdrawal_fee_percent", "transfer_fee_percent"]),
+      supabase.from("msn_coins").select("coins, is_converted").eq("user_id", user!.id).eq("is_converted", false),
+      supabase.from("msn_config").select("*"),
     ]);
     setProfile(profileRes.data);
     setTransactions(txRes.data || []);
@@ -60,6 +65,11 @@ const WalletPage = () => {
     const feeData: any = {};
     (feeRes.data || []).forEach((c: any) => { feeData[c.key] = Number(c.value); });
     setFees({ withdrawal_fee_percent: feeData.withdrawal_fee_percent || 0, transfer_fee_percent: feeData.transfer_fee_percent || 0 });
+    const totalCoins = (coinsRes.data || []).reduce((s: number, c: any) => s + c.coins, 0);
+    setMsnCoins(totalCoins);
+    const cfgMap: Record<string, any> = {};
+    (msnCfgRes.data || []).forEach((r: any) => { cfgMap[r.key] = r.value; });
+    setMsnConfig(cfgMap);
   };
 
   const fetchRates = async () => {
