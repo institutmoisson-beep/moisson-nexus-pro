@@ -660,15 +660,25 @@ export type Database = {
         Args: { _buyer_user_id: string; _order_id: string }
         Returns: undefined
       }
-      distribute_commissions: {
-        Args: {
-          _buyer_user_id: string
-          _pack_id: string
-          _pack_name: string
-          _pack_price: number
-        }
-        Returns: undefined
-      }
+      distribute_commissions:
+        | {
+            Args: {
+              _buyer_user_id: string
+              _pack_id: string
+              _pack_name: string
+              _pack_price: number
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _buyer_user_id: string
+              _pack_id: string
+              _pack_name: string
+              _pack_price: number
+            }
+            Returns: undefined
+          }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
