@@ -50,8 +50,8 @@ const formatCurrency = (amount: number) =>
  */
 export const generatePurchaseReceiptHTML = (data: PurchaseReceiptData): void => {
   const date = data.date || formatDate();
-  const contractNumber = MSN-${Date.now().toString(36).toUpperCase()};
-  const receiptNumber = RECU-${data.orderId.slice(0, 8).toUpperCase()};
+  const contractNumber = `MSN-${Date.now().toString(36).toUpperCase()}`;
+  const receiptNumber = `RECU-${data.orderId.slice(0, 8).toUpperCase()}`;
 
   const totalCommPct = (data.commissions || []).reduce(
     (sum, c) => sum + c.percentage,
@@ -139,9 +139,9 @@ export const generatePurchaseReceiptHTML = (data: PurchaseReceiptData): void => 
         <h3>👤 Informations du membre</h3>
         <div class="receipt-row"><span class="label">Nom complet</span><span class="value">${data.memberName}</span></div>
         <div class="receipt-row"><span class="label">Email</span><span class="value">${data.memberEmail}</span></div>
-        ${data.memberPhone ? <div class="receipt-row"><span class="label">Téléphone</span><span class="value">${data.memberPhone}</span></div> : ""}
+        ${data.memberPhone ? `<div class="receipt-row"><span class="label">Téléphone</span><span class="value">${data.memberPhone}</span></div>` : ""}
         <div class="receipt-row"><span class="label">Code Moissonneur</span><span class="value" style="font-family:monospace;">${data.referralCode}</span></div>
-        ${data.memberCountry ? <div class="receipt-row"><span class="label">Pays</span><span class="value">${data.memberCity ? data.memberCity + ", " : ""}${data.memberCountry}</span></div> : ""}
+        ${data.memberCountry ? `<div class="receipt-row"><span class="label">Pays</span><span class="value">${data.memberCity ? data.memberCity + ", " : ""}${data.memberCountry}</span></div>` : ""}
       </div>
 
       <div class="section">
@@ -156,10 +156,10 @@ export const generatePurchaseReceiptHTML = (data: PurchaseReceiptData): void => 
         data.deliveryCity || data.deliveryCountry
           ? `<div class="section">
         <h3>🚚 Adresse de livraison</h3>
-        ${data.deliveryStreet ? <div class="receipt-row"><span class="label">Rue / Quartier</span><span class="value">${data.deliveryStreet}</span></div> : ""}
-        ${data.deliveryCity ? <div class="receipt-row"><span class="label">Ville</span><span class="value">${data.deliveryCity}</span></div> : ""}
-        ${data.deliveryCountry ? <div class="receipt-row"><span class="label">Pays</span><span class="value">${data.deliveryCountry}</span></div> : ""}
-        ${data.deliveryPhone ? <div class="receipt-row"><span class="label">Contact livraison</span><span class="value">${data.deliveryPhone}</span></div> : ""}
+        ${data.deliveryStreet ? `<div class="receipt-row"><span class="label">Rue / Quartier</span><span class="value">${data.deliveryStreet}</span></div>` : ""}
+        ${data.deliveryCity ? `<div class="receipt-row"><span class="label">Ville</span><span class="value">${data.deliveryCity}</span></div>` : ""}
+        ${data.deliveryCountry ? `<div class="receipt-row"><span class="label">Pays</span><span class="value">${data.deliveryCountry}</span></div>` : ""}
+        ${data.deliveryPhone ? `<div class="receipt-row"><span class="label">Contact livraison</span><span class="value">${data.deliveryPhone}</span></div>` : ""}
       </div>`
           : ""
       }
@@ -174,7 +174,7 @@ export const generatePurchaseReceiptHTML = (data: PurchaseReceiptData): void => 
             ${data.commissions
               .map(
                 (c) =>
-                  <tr><td>Niveau ${c.level}</td><td>${c.percentage}%</td><td>${Math.round((data.packPrice * c.percentage) / 100).toLocaleString("fr-FR")} FCFA</td></tr>
+                  `<tr><td>Niveau ${c.level}</td><td>${c.percentage}%</td><td>${Math.round((data.packPrice * c.percentage) / 100).toLocaleString("fr-FR")} FCFA</td></tr>`
               )
               .join("")}
           </tbody>
@@ -285,6 +285,6 @@ export const generatePurchaseReceiptHTML = (data: PurchaseReceiptData): void => 
  * Download the receipt/contract as an HTML file that can be printed to PDF
  */
 export const downloadPurchaseReceipt = (data: PurchaseReceiptData): void => {
-  const receiptNumber = RECU-${data.orderId.slice(0, 8).toUpperCase()};
+  const receiptNumber = `RECU-${data.orderId.slice(0, 8).toUpperCase()}`;
   generatePurchaseReceiptHTML(data);
 };
