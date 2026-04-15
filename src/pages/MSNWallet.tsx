@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Flame, Coins, TrendingUp, ArrowRightLeft, History,
-  Send, RefreshCw, X, ChevronDown, Check, Search,
-  Wallet, ArrowDownCircle, Info
+  Send, RefreshCw, X, Check, Search,
+  Wallet, ArrowDownCircle, Info, AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+
+// 1 MSN Coin = 450 FCFA (XOF)
+const MSN_COIN_RATE_FCFA = 450;
 
 const CURRENCIES = [
   { code: "XOF", label: "FCFA (XOF)", symbol: "FCFA" },
@@ -30,7 +33,6 @@ const MSNWalletPage = () => {
   const [profile, setProfile] = useState<any>(null);
   const [msnCoins, setMsnCoins] = useState(0);
   const [coinHistory, setCoinHistory] = useState<any[]>([]);
-  const [msnConfig, setMsnConfig] = useState<any>({});
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
   const [displayCurrency, setDisplayCurrency] = useState("XOF");
   const [ratesLoading, setRatesLoading] = useState(false);
@@ -42,8 +44,8 @@ const MSNWalletPage = () => {
   const [recipientFound, setRecipientFound] = useState<any>(null);
   const [searching, setSearching] = useState(false);
 
-  // Convert state
-  const [selectedTier, setSelectedTier] = useState<any>(null);
+  // Convert to wallet state
+  const [convertAmount, setConvertAmount] = useState("");
   const [convertCurrency, setConvertCurrency] = useState("XOF");
   const [converting, setConverting] = useState(false);
   const [showConvertModal, setShowConvertModal] = useState(false);
@@ -57,19 +59,15 @@ const MSNWalletPage = () => {
   }, [user]);
 
   const loadData = async () => {
-    const [profileRes, coinsRes, historyRes, cfgRes] = await Promise.all([
+    const [profileRes, coinsRes, historyRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
       supabase.from("msn_coins").select("coins").eq("user_id", user!.id).eq("is_converted", false),
       supabase.from("msn_coins").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }).limit(50),
-      supabase.from("msn_config").select("*"),
     ]);
     setProfile(profileRes.data);
     const total = (coinsRes.data || []).reduce((s: number, c: any) => s + c.coins, 0);
     setMsnCoins(total);
     setCoinHistory(historyRes.data || []);
-    const cfgMap: Record<string, any> = {};
-    (cfgRes.data || []).forEach((r: any) => { cfgMap[r.key] = r.value; });
-    setMsnConfig(cfgMap);
   };
 
   const fetchRates = async () => {
@@ -79,7 +77,12 @@ const MSNWalletPage = () => {
       const data = await res.json();
       setExchangeRates(data.rates || {});
     } catch {
-      setExchangeRates({ USD: 0.00162, EUR: 0.00152, GBP: 0.00128, XAF: 1, MAD: 0.0163, GHS: 0.0196, NGN: 2.43, CAD: 0.0022, CHF: 0.00146, BTC: 0.000000025 });
+      // Fallback rates
+      setExchangeRates({
+        USD: 0.00162, EUR: 0.00152, GBP: 0.00128, XAF: 1,
+        MAD: 0.0163, GHS: 0.0196, NGN: 2.43, CAD: 0.0022,
+        CHF: 0.00146, BTC: 0.000000025
+      });
     }
     setRatesLoading(false);
   };
@@ -99,17 +102,13 @@ const MSNWalletPage = () => {
     return Math.round(amount).toLocaleString("fr-FR");
   };
 
-  const getDollarValueInCurrency = (dollars: number, currency: string): number => {
-    const usdToXOF = exchangeRates["USD"] ? 1 / exchangeRates["USD"] : 620;
-    const fcfa = dollars * usdToXOF;
-    return convertFromXOF(fcfa, currency);
-  };
+  // Convert coins to FCFA: 1 coin = 450 FCFA
+  const coinsToFCFA = (coins: number) => coins * MSN_COIN_RATE_FCFA;
+  const coinsToValue = (coins: number, currency: string) => convertFromXOF(coinsToFCFA(coins), currency);
 
-  const conversionTiers: { coins: number; dollars: number }[] = msnConfig.conversion_tiers || [
-    { coins: 3, dollars: 40 },
-    { coins: 6, dollars: 125 },
-    { coins: 12, dollars: 250 },
-  ];
+  // Total wallet value in selected display currency
+  const totalFCFA = coinsToFCFA(msnCoins);
+  const totalInCurrency = convertFromXOF(totalFCFA, displayCurrency);
 
   // Search recipient
   const searchRecipient = async () => {
@@ -134,7 +133,7 @@ const MSNWalletPage = () => {
 
     setTransferSubmitting(true);
 
-    // Deduct from sender
+    // Deduct from sender (oldest first)
     let toDeduct = amount;
     const { data: senderCoins } = await supabase.from("msn_coins")
       .select("id, coins").eq("user_id", user!.id).eq("is_converted", false)
@@ -169,12 +168,14 @@ const MSNWalletPage = () => {
   };
 
   const handleConvertToWallet = async () => {
-    if (!selectedTier) return;
-    if (msnCoins < selectedTier.coins) { toast.error("Coins insuffisants"); return; }
+    const amount = parseInt(convertAmount);
+    if (!amount || amount <= 0) { toast.error("Entrez un montant valide"); return; }
+    if (amount > msnCoins) { toast.error(`Vous avez seulement ${msnCoins} coins disponibles`); return; }
 
     setConverting(true);
 
-    let toConvert = selectedTier.coins;
+    // Deduct coins (oldest first)
+    let toConvert = amount;
     const { data: userCoins } = await supabase.from("msn_coins")
       .select("id, coins").eq("user_id", user!.id).eq("is_converted", false)
       .order("created_at", { ascending: true });
@@ -192,25 +193,31 @@ const MSNWalletPage = () => {
       }
     }
 
-    const usdToXOF = exchangeRates["USD"] ? 1 / exchangeRates["USD"] : 620;
-    const fcfaAmount = Math.round(selectedTier.dollars * usdToXOF);
+    // 1 coin = 450 FCFA
+    const fcfaAmount = amount * MSN_COIN_RATE_FCFA;
     const newBalance = Number(profile.wallet_balance) + fcfaAmount;
 
     await supabase.from("profiles").update({ wallet_balance: newBalance }).eq("user_id", user!.id);
     await supabase.from("transactions").insert({
-      user_id: user!.id, amount: fcfaAmount, type: "bonus" as const, status: "approved" as const,
-      description: `Conversion MSN: ${selectedTier.coins} coins → $${selectedTier.dollars} (${fcfaAmount.toLocaleString("fr-FR")} FCFA)`,
-      metadata: { coins_used: selectedTier.coins, dollar_value: selectedTier.dollars },
+      user_id: user!.id,
+      amount: fcfaAmount,
+      type: "bonus" as const,
+      status: "approved" as const,
+      description: `Conversion MSN: ${amount} coin${amount > 1 ? "s" : ""} → ${fcfaAmount.toLocaleString("fr-FR")} FCFA (${amount} × 450 FCFA)`,
+      metadata: { coins_used: amount, fcfa_rate: MSN_COIN_RATE_FCFA, total_fcfa: fcfaAmount },
     });
+
     await supabase.from("msn_conversions").insert({
-      user_id: user!.id, coins_used: selectedTier.coins, dollar_amount: selectedTier.dollars,
+      user_id: user!.id,
+      coins_used: amount,
+      dollar_amount: fcfaAmount / (exchangeRates["USD"] ? 1 / exchangeRates["USD"] : 620),
     } as any);
 
-    const valueInCur = getDollarValueInCurrency(selectedTier.dollars, convertCurrency);
-    toast.success(`🔥 ${selectedTier.coins} coins convertis → +${formatAmount(valueInCur, convertCurrency)} ${getCurrencySymbol(convertCurrency)} dans votre portefeuille !`);
+    const valueInCur = convertFromXOF(fcfaAmount, convertCurrency);
+    toast.success(`🔥 ${amount} coins convertis → +${formatAmount(valueInCur, convertCurrency)} ${getCurrencySymbol(convertCurrency)} dans votre portefeuille !`);
     setConverting(false);
     setShowConvertModal(false);
-    setSelectedTier(null);
+    setConvertAmount("");
     loadData();
   };
 
@@ -222,19 +229,24 @@ const MSNWalletPage = () => {
     );
   }
 
-  const totalCoinValue = msnCoins * 10000; // 1 coin ≈ 10,000 FCFA base
+  const convertAmountNum = parseInt(convertAmount) || 0;
+  const convertFCFA = convertAmountNum * MSN_COIN_RATE_FCFA;
+  const convertInCurrency = convertFromXOF(convertFCFA, convertCurrency);
 
   return (
     <DashboardLayout>
       <h1 className="text-3xl font-heading font-bold text-foreground mb-2">🔥 Portefeuille MSN Coins</h1>
-      <p className="text-muted-foreground font-body mb-6">Gérez vos MSN Coins — Convertissez, transférez et suivez votre historique</p>
+      <p className="text-muted-foreground font-body mb-6">
+        <span className="bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full text-sm">1 MSN Coin = 450 FCFA</span>
+        {" "}— Convertissez, transférez et suivez votre historique
+      </p>
 
       {/* ── TABS ── */}
       <div className="flex gap-1 bg-secondary p-1 rounded-xl mb-6 w-fit">
         {[
-          { key: "wallet", label: "💰 Mon Portefeuille", icon: Coins },
-          { key: "history", label: "📋 Historique", icon: History },
-          { key: "transfer", label: "📲 Transférer", icon: Send },
+          { key: "wallet", label: "💰 Mon Portefeuille" },
+          { key: "history", label: "📋 Historique" },
+          { key: "transfer", label: "📲 Transférer" },
         ].map(tab => (
           <button
             key={tab.key}
@@ -265,7 +277,8 @@ const MSNWalletPage = () => {
                     <Coins className="w-7 h-7 text-gold" />
                   </div>
                   <p className="text-xs text-muted-foreground font-body mt-1">
-                    Valeur estimée ≈ {totalCoinValue.toLocaleString("fr-FR")} FCFA
+                    = <span className="text-primary font-bold">{totalFCFA.toLocaleString("fr-FR")} FCFA</span>
+                    {" "}(1 coin × 450 FCFA)
                   </p>
                 </div>
               </div>
@@ -286,75 +299,119 @@ const MSNWalletPage = () => {
 
             {/* Value in selected currency */}
             <div className="bg-card rounded-xl p-4 border border-border">
-              <p className="text-xs text-muted-foreground font-body mb-1">Valeur actuelle de vos coins en {displayCurrency}</p>
-              <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground font-body mb-1">
+                Valeur de vos {msnCoins} coins en {displayCurrency}
+              </p>
+              <div className="flex items-center gap-3">
                 <span className="text-2xl font-heading font-bold text-primary">
-                  {formatAmount(convertFromXOF(totalCoinValue, displayCurrency), displayCurrency)} {getCurrencySymbol(displayCurrency)}
+                  {formatAmount(totalInCurrency, displayCurrency)} {getCurrencySymbol(displayCurrency)}
                 </span>
-                {displayCurrency !== "XOF" && (
-                  <span className="text-xs text-muted-foreground font-body">
-                    (basé sur ≈ 10 000 FCFA/coin)
-                  </span>
-                )}
+                <span className="text-xs text-muted-foreground font-body bg-secondary px-2 py-1 rounded-full">
+                  1 coin = {formatAmount(convertFromXOF(MSN_COIN_RATE_FCFA, displayCurrency), displayCurrency)} {getCurrencySymbol(displayCurrency)}
+                </span>
               </div>
             </div>
 
             <div className="bg-secondary/50 rounded-lg p-3 mt-3 flex items-start gap-2">
               <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground font-body">
-                Sélectionnez une devise pour <strong>visualiser</strong> la valeur. La conversion réelle s'effectue via les paliers ci-dessous et crédite votre portefeuille principal en FCFA.
+                Taux fixe : <strong className="text-foreground">1 MSN Coin = 450 FCFA</strong>. La valeur dans les autres devises est calculée via le taux de change en temps réel.
               </p>
             </div>
           </div>
 
-          {/* Conversion Tiers */}
+          {/* Convert to Main Wallet */}
           <div className="card-elevated">
             <h2 className="text-lg font-heading font-semibold text-foreground mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" /> Convertir en argent réel
+              <Wallet className="w-5 h-5 text-primary" /> Convertir en FCFA (Portefeuille principal)
             </h2>
 
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-xs text-muted-foreground font-body">Voir la valeur en :</span>
-              <select value={convertCurrency} onChange={e => setConvertCurrency(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-input bg-background text-foreground font-body text-xs">
-                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
-              </select>
+            <div className="bg-gradient-to-r from-primary/10 to-gold/10 rounded-xl p-4 mb-4 border border-primary/20">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">Taux de conversion</p>
+                  <p className="text-xl font-heading font-bold text-primary">450 FCFA</p>
+                  <p className="text-xs text-muted-foreground font-body">par coin</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">Vos coins</p>
+                  <p className="text-xl font-heading font-bold text-foreground">{msnCoins}</p>
+                  <p className="text-xs text-muted-foreground font-body">disponibles</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-body">Valeur max</p>
+                  <p className="text-xl font-heading font-bold text-gold">{totalFCFA.toLocaleString("fr-FR")}</p>
+                  <p className="text-xs text-muted-foreground font-body">FCFA</p>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {conversionTiers.map((tier, i) => {
-                const valueInCur = getDollarValueInCurrency(tier.dollars, convertCurrency);
-                const canConvert = msnCoins >= tier.coins;
-                return (
-                  <div
-                    key={i}
-                    className={`rounded-xl border-2 p-4 text-center transition-all ${
-                      canConvert
-                        ? "border-primary/40 bg-primary/5 hover:border-primary cursor-pointer hover:shadow-md"
-                        : "border-border/40 bg-muted/20 opacity-50 cursor-not-allowed"
-                    }`}
-                    onClick={() => {
-                      if (!canConvert) return;
-                      setSelectedTier(tier);
-                      setShowConvertModal(true);
-                    }}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5 font-body">
+                  Nombre de coins à convertir
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max={msnCoins}
+                    placeholder={`1 à ${msnCoins}`}
+                    value={convertAmount}
+                    onChange={e => setConvertAmount(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body text-sm"
+                  />
+                  <button
+                    onClick={() => setConvertAmount(String(msnCoins))}
+                    className="px-3 py-2 rounded-lg bg-secondary text-foreground font-body text-xs font-semibold hover:bg-muted transition-colors"
                   >
-                    <div className="text-2xl mb-1">🪙</div>
-                    <p className="text-2xl font-heading font-bold text-foreground">{tier.coins}</p>
-                    <p className="text-xs text-muted-foreground font-body mb-2">coins</p>
-                    <div className="h-px bg-border my-2" />
-                    <p className="text-lg font-bold text-gold">${tier.dollars}</p>
-                    <p className="text-xs text-primary font-body font-semibold mt-1">
-                      ≈ {formatAmount(valueInCur, convertCurrency)} {getCurrencySymbol(convertCurrency)}
-                    </p>
-                    {!canConvert && (
-                      <p className="text-[10px] text-muted-foreground font-body mt-2">
-                        Manque {tier.coins - msnCoins} coins
-                      </p>
-                    )}
+                    Max
+                  </button>
+                </div>
+              </div>
+
+              {convertAmountNum > 0 && (
+                <div className="bg-secondary rounded-xl p-4 space-y-2">
+                  <div className="flex justify-between text-sm font-body">
+                    <span className="text-muted-foreground">Coins utilisés :</span>
+                    <span className="font-bold text-foreground">{convertAmountNum} coins</span>
                   </div>
-                );
-              })}
+                  <div className="flex justify-between text-sm font-body">
+                    <span className="text-muted-foreground">Valeur FCFA :</span>
+                    <span className="font-bold text-primary">{convertFCFA.toLocaleString("fr-FR")} FCFA</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={convertCurrency}
+                      onChange={e => setConvertCurrency(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-input bg-background text-foreground font-body text-xs"
+                    >
+                      {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                    </select>
+                    <span className="text-sm font-bold text-gold">
+                      ≈ {formatAmount(convertInCurrency, convertCurrency)} {getCurrencySymbol(convertCurrency)}
+                    </span>
+                  </div>
+                  {convertAmountNum > msnCoins && (
+                    <div className="flex items-center gap-2 text-destructive text-xs font-body">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      Solde insuffisant (vous avez {msnCoins} coins)
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  if (!convertAmountNum || convertAmountNum <= 0) { toast.error("Entrez un nombre de coins valide"); return; }
+                  if (convertAmountNum > msnCoins) { toast.error("Solde insuffisant"); return; }
+                  setShowConvertModal(true);
+                }}
+                disabled={msnCoins === 0 || !convertAmountNum || convertAmountNum <= 0}
+                className="w-full btn-gold !text-sm !py-2.5 disabled:opacity-50"
+              >
+                🔥 Convertir {convertAmountNum > 0 ? `${convertAmountNum} coins → ${convertFCFA.toLocaleString("fr-FR")} FCFA` : "des coins"}
+              </button>
             </div>
 
             {msnCoins === 0 && (
@@ -366,20 +423,24 @@ const MSNWalletPage = () => {
             )}
           </div>
 
-          {/* Quick transfer to main wallet */}
+          {/* Quick info to main wallet */}
           <div className="card-elevated">
-            <h2 className="text-lg font-heading font-semibold text-foreground mb-2 flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-harvest-green" /> Portefeuille principal
-            </h2>
-            <p className="text-sm text-muted-foreground font-body mb-3">
-              Solde actuel : <span className="font-bold text-primary">{Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA</span>
-            </p>
-            <button
-              onClick={() => navigate("/portefeuille")}
-              className="btn-hero !text-sm !py-2.5 !px-5"
-            >
-              <ArrowDownCircle className="w-4 h-4 mr-2" /> Aller au portefeuille principal
-            </button>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-harvest-green" /> Portefeuille principal
+                </h2>
+                <p className="text-sm text-muted-foreground font-body mt-1">
+                  Solde actuel : <span className="font-bold text-primary">{Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA</span>
+                </p>
+              </div>
+              <button
+                onClick={() => navigate("/portefeuille")}
+                className="btn-hero !text-sm !py-2.5 !px-5"
+              >
+                <ArrowDownCircle className="w-4 h-4 mr-2" /> Voir
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -415,10 +476,10 @@ const MSNWalletPage = () => {
                         "bg-muted text-muted-foreground"
                       }`}>
                         {c.source_type === "network_sale" ? "🌾 Vente réseau" :
-                         c.source_type === "transfer" ? "📲 Transfert reçu" : c.source_type}
+                         c.source_type === "transfer" ? "📲 Transfert" : c.source_type}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-center font-bold text-foreground">
+                    <td className="py-2 px-3 text-center font-bold">
                       {c.is_converted ? (
                         <span className="text-muted-foreground line-through">{c.coins}</span>
                       ) : (
@@ -432,8 +493,8 @@ const MSNWalletPage = () => {
                         <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">Disponible</span>
                       )}
                     </td>
-                    <td className="py-2 px-3 text-right text-xs text-muted-foreground">
-                      ≈ {(c.coins * 10000).toLocaleString("fr-FR")} FCFA
+                    <td className="py-2 px-3 text-right text-xs text-muted-foreground font-semibold">
+                      {(c.coins * MSN_COIN_RATE_FCFA).toLocaleString("fr-FR")} FCFA
                     </td>
                   </tr>
                 ))}
@@ -457,8 +518,8 @@ const MSNWalletPage = () => {
             <Send className="w-5 h-5 text-primary" /> Transférer des MSN Coins
           </h2>
           <p className="text-sm text-muted-foreground font-body mb-6">
-            Envoyez des MSN Coins à un autre Moissonneur via son code ou email.
-            Vous avez <span className="font-bold text-gold">{msnCoins} coins</span> disponibles.
+            Envoyez des MSN Coins à un autre Moissonneur.
+            Vous avez <span className="font-bold text-gold">{msnCoins} coins</span> (= {totalFCFA.toLocaleString("fr-FR")} FCFA).
           </p>
 
           <form onSubmit={handleTransferCoins} className="space-y-4">
@@ -511,7 +572,7 @@ const MSNWalletPage = () => {
               />
               {transferForm.amount && Number(transferForm.amount) > 0 && (
                 <p className="text-xs text-muted-foreground font-body mt-1">
-                  Valeur estimée ≈ {(Number(transferForm.amount) * 10000).toLocaleString("fr-FR")} FCFA
+                  Valeur = {(Number(transferForm.amount) * MSN_COIN_RATE_FCFA).toLocaleString("fr-FR")} FCFA
                 </p>
               )}
             </div>
@@ -527,52 +588,56 @@ const MSNWalletPage = () => {
         </div>
       )}
 
-      {/* ══ CONVERT MODAL ══ */}
-      {showConvertModal && selectedTier && (
+      {/* ══ CONVERT CONFIRMATION MODAL ══ */}
+      {showConvertModal && (
         <div className="fixed inset-0 bg-foreground/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-card rounded-2xl border border-border p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
                 <Flame className="w-5 h-5 text-primary" /> Confirmer la conversion
               </h2>
-              <button onClick={() => { setShowConvertModal(false); setSelectedTier(null); }}
+              <button onClick={() => setShowConvertModal(false)}
                 className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
 
             <div className="bg-gradient-to-r from-primary/10 to-gold/10 rounded-xl p-4 mb-4 border border-primary/20">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mb-3">
                 <div>
                   <p className="text-xs text-muted-foreground font-body">Vous convertissez</p>
-                  <p className="text-3xl font-heading font-bold text-foreground">{selectedTier.coins} <span className="text-base text-gold">coins</span></p>
+                  <p className="text-3xl font-heading font-bold text-foreground">
+                    {convertAmountNum} <span className="text-base text-gold">coins</span>
+                  </p>
                 </div>
                 <ArrowRightLeft className="w-6 h-6 text-primary" />
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground font-body">Vous recevez</p>
-                  <p className="text-3xl font-heading font-bold text-primary">${selectedTier.dollars}</p>
+                  <p className="text-3xl font-heading font-bold text-primary">
+                    {convertFCFA.toLocaleString("fr-FR")} <span className="text-base">FCFA</span>
+                  </p>
                 </div>
               </div>
+              <p className="text-xs text-center text-muted-foreground font-body">
+                Taux : {convertAmountNum} × 450 FCFA = {convertFCFA.toLocaleString("fr-FR")} FCFA
+              </p>
             </div>
 
-            <div className="space-y-2 mb-4">
-              <p className="text-xs text-muted-foreground font-body">Valeur dans votre devise :</p>
-              <select value={convertCurrency} onChange={e => setConvertCurrency(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm">
-                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
-              </select>
-              <div className="bg-secondary rounded-lg p-3 text-center">
-                <p className="text-xl font-heading font-bold text-harvest-green">
-                  {formatAmount(getDollarValueInCurrency(selectedTier.dollars, convertCurrency), convertCurrency)} {getCurrencySymbol(convertCurrency)}
-                </p>
-                <p className="text-xs text-muted-foreground font-body">
-                  ≈ {Math.round(selectedTier.dollars * (exchangeRates["USD"] ? 1 / exchangeRates["USD"] : 620)).toLocaleString("fr-FR")} FCFA crédités sur votre portefeuille
-                </p>
+            <div className="bg-secondary rounded-lg p-3 mb-4">
+              <p className="text-xs text-muted-foreground font-body mb-1">Équivalent dans d'autres devises :</p>
+              <div className="flex items-center gap-2">
+                <select value={convertCurrency} onChange={e => setConvertCurrency(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm">
+                  {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                </select>
+                <span className="font-bold text-harvest-green text-sm">
+                  ≈ {formatAmount(convertInCurrency, convertCurrency)} {getCurrencySymbol(convertCurrency)}
+                </span>
               </div>
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs font-body text-amber-800">
-              ⚠️ Cette action est <strong>irréversible</strong>. {selectedTier.coins} coins seront définitivement convertis.
+              ⚠️ Cette action est <strong>irréversible</strong>. {convertAmountNum} coins seront définitivement convertis et crédités sur votre portefeuille principal.
             </div>
 
             <div className="flex gap-3">
@@ -581,9 +646,9 @@ const MSNWalletPage = () => {
                 disabled={converting}
                 className="flex-1 btn-gold !text-sm !py-2.5 disabled:opacity-50"
               >
-                {converting ? "Conversion..." : `🔥 Confirmer la conversion`}
+                {converting ? "Conversion..." : `🔥 Confirmer — +${convertFCFA.toLocaleString("fr-FR")} FCFA`}
               </button>
-              <button onClick={() => { setShowConvertModal(false); setSelectedTier(null); }}
+              <button onClick={() => setShowConvertModal(false)}
                 className="px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary">
                 Annuler
               </button>
