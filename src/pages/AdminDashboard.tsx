@@ -7,7 +7,7 @@ import logo from "@/assets/logo-moisson.png";
 import {
   Users, Package, Building2, CreditCard, TrendingUp, Award,
   LogOut, ArrowLeft, Wallet, FolderOpen, UserCheck,
-  Menu, X, ShoppingBag, Settings2
+  Menu, X, ShoppingBag, Settings2, Flame
 } from "lucide-react";
 import AdminOverview from "@/components/admin/AdminOverview";
 import AdminUsers from "@/components/admin/AdminUsers";
@@ -22,15 +22,18 @@ import AdminProDirectory from "@/components/admin/AdminProDirectory";
 import AdminOrders from "@/components/admin/AdminOrders";
 import AdminFees from "@/components/admin/AdminFees";
 import AdminMSN from "@/components/admin/AdminMSN";
+import AdminMSNWithdrawals from "@/components/admin/AdminMSNWithdrawals";
 
-type AdminTab = "overview" | "users" | "packs" | "sectors" | "partners" | "transactions" | "payments" | "commissions" | "bonuses" | "pro_directory" | "orders" | "fees" | "msn_plan";
+type AdminTab =
+  | "overview" | "users" | "packs" | "sectors" | "partners"
+  | "transactions" | "payments" | "commissions" | "bonuses"
+  | "pro_directory" | "orders" | "fees" | "msn_plan" | "msn_withdrawals";
 
-// Map staff roles to the tabs they can access
 const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
-  financier: ["overview", "transactions", "payments", "commissions", "bonuses", "fees"],
+  financier: ["overview", "transactions", "payments", "commissions", "bonuses", "fees", "msn_withdrawals"],
   gestion_packs: ["overview", "packs", "sectors", "orders", "commissions"],
   gestion_stand: ["overview", "partners", "orders"],
-  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan"],
+  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan", "msn_withdrawals"],
   commercial: ["overview", "users", "pro_directory", "orders"],
   communication: ["overview", "partners", "pro_directory"],
 };
@@ -49,6 +52,7 @@ const ALL_TABS: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
   { key: "bonuses", label: "Bonus carrière", icon: <Award className="w-4 h-4" /> },
   { key: "fees", label: "Frais & Config", icon: <Settings2 className="w-4 h-4" /> },
   { key: "msn_plan", label: "Plan MSN 🔥", icon: <TrendingUp className="w-4 h-4" /> },
+  { key: "msn_withdrawals", label: "Retraits MSN 🔥", icon: <Flame className="w-4 h-4" /> },
 ];
 
 const AdminDashboard = () => {
@@ -59,6 +63,7 @@ const AdminDashboard = () => {
   const [checkingRole, setCheckingRole] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingMsnWithdrawals, setPendingMsnWithdrawals] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) { navigate("/connexion"); return; }
@@ -66,7 +71,8 @@ const AdminDashboard = () => {
       Promise.all([
         supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
         supabase.from("staff_roles").select("role").eq("user_id", user.id),
-      ]).then(([adminRes, staffRes]) => {
+        supabase.from("msn_withdrawals" as any).select("id", { count: "exact", head: true }).eq("status", "pending"),
+      ]).then(([adminRes, staffRes, wdRes]) => {
         const admin = !!adminRes.data;
         const roles = (staffRes.data || []).map((r: any) => r.role);
         if (!admin && roles.length === 0) {
@@ -76,16 +82,20 @@ const AdminDashboard = () => {
           setIsAdmin(admin);
           setStaffRoles(roles);
         }
+        setPendingMsnWithdrawals((wdRes as any).count || 0);
         setCheckingRole(false);
       });
     }
   }, [user, loading, navigate]);
 
   if (loading || checkingRole || (!isAdmin && staffRoles.length === 0)) {
-    return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground font-body">Vérification des droits...</div></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground font-body">Vérification des droits...</div>
+      </div>
+    );
   }
 
-  // Admin sees all tabs, staff sees only their allowed tabs
   const allowedTabs = isAdmin
     ? ALL_TABS
     : ALL_TABS.filter(t => {
@@ -130,10 +140,15 @@ const AdminDashboard = () => {
           <nav className="space-y-0.5">
             {allowedTabs.map(tab => (
               <button key={tab.key} onClick={() => handleTabClick(tab.key)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-body transition-all ${
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-body transition-all relative ${
                   activeTab === tab.key ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}>
                 {tab.icon} {tab.label}
+                {tab.key === "msn_withdrawals" && pendingMsnWithdrawals > 0 && (
+                  <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    {pendingMsnWithdrawals}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -146,10 +161,15 @@ const AdminDashboard = () => {
               <nav className="space-y-0.5">
                 {allowedTabs.map(tab => (
                   <button key={tab.key} onClick={() => handleTabClick(tab.key)}
-                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-body transition-all ${
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-body transition-all relative ${
                       activeTab === tab.key ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     }`}>
                     {tab.icon} {tab.label}
+                    {tab.key === "msn_withdrawals" && pendingMsnWithdrawals > 0 && (
+                      <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {pendingMsnWithdrawals}
+                      </span>
+                    )}
                   </button>
                 ))}
               </nav>
@@ -171,6 +191,7 @@ const AdminDashboard = () => {
           {activeTab === "bonuses" && <AdminBonuses />}
           {activeTab === "fees" && <AdminFees />}
           {activeTab === "msn_plan" && <AdminMSN />}
+          {activeTab === "msn_withdrawals" && <AdminMSNWithdrawals />}
         </main>
       </div>
     </div>
