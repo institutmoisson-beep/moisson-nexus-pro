@@ -2,7 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ShoppingCart, MapPin, Download, ChevronLeft, ChevronRight, ArrowLeft, Building2, X, TrendingUp, CheckCircle, FileText } from "lucide-react";
+import { ShoppingCart, MapPin, Download, ChevronLeft, ChevronRight, ArrowLeft, Building2, X, TrendingUp, CheckCircle, FileText, Flame, Coins, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { generatePurchaseReceiptHTML } from "@/lib/generatePDF";
@@ -22,18 +22,35 @@ const PackDetailPage = () => {
   const [purchaseStep, setPurchaseStep] = useState<"form" | "processing" | "done">("form");
   const [completedOrderId, setCompletedOrderId] = useState<string>("");
 
+  // Payment method: "wallet" or "msn"
+  const [paymentMethod, setPaymentMethod] = useState<"wallet" | "msn">("wallet");
+  const [msnCoins, setMsnCoins] = useState(0);
+  const [coinUsdRate, setCoinUsdRate] = useState<number>(1);
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+
   useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
   useEffect(() => { if (user && id) loadData(); }, [user, id]);
 
   const loadData = async () => {
-    const [packRes, profileRes, commRes] = await Promise.all([
+    const [packRes, profileRes, commRes, coinsRes, msnCfgRes] = await Promise.all([
       supabase.from("packs").select("*, partner_companies(*)").eq("id", id!).single(),
       supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
       supabase.from("pack_commissions").select("*").eq("pack_id", id!).order("level_number"),
+      supabase.from("msn_coins").select("coins").eq("user_id", user!.id).eq("is_converted", false),
+      supabase.from("msn_config").select("*"),
     ]);
     setPack(packRes.data);
     setProfile(profileRes.data);
     setCommissions(commRes.data || []);
+
+    const totalCoins = (coinsRes.data || []).reduce((s: number, c: any) => s + c.coins, 0);
+    setMsnCoins(totalCoins);
+
+    const cfgMap: Record<string, any> = {};
+    (msnCfgRes.data || []).forEach((r: any) => { cfgMap[r.key] = r.value; });
+    const rate = Number(cfgMap.coin_usd_rate) || 1;
+    setCoinUsdRate(rate);
+
     if (profileRes.data) {
       setDeliveryForm({
         address: profileRes.data.address || "",
@@ -43,7 +60,26 @@ const PackDetailPage = () => {
         street: profileRes.data.street || "",
       });
     }
+
+    // Fetch exchange rates for coin → FCFA conversion
+    try {
+      const res = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
+      const data = await res.json();
+      setExchangeRates(data.rates || {});
+    } catch {
+      setExchangeRates({ XOF: 620 });
+    }
   };
+
+  // How many coins are needed to pay for this pack
+  const coinValueInXOF = (coins: number) => {
+    const usdValue = coins * coinUsdRate;
+    const xofRate = exchangeRates["XOF"] || 620;
+    return usdValue * xofRate;
+  };
+
+  const coinsNeeded = pack ? Math.ceil(Number(pack.price) / (coinUsdRate * (exchangeRates["XOF"] || 620))) : 0;
+  const canPayWithMSN = msnCoins >= coinsNeeded && coinsNeeded > 0;
 
   const handleDownloadReceipt = (orderId: string) => {
     if (!profile || !pack) return;
@@ -65,19 +101,50 @@ const PackDetailPage = () => {
     });
   };
 
+  const deductMSNCoins = async (coinsToUse: number) => {
+    let toDeduct = coinsToUse;
+    const { data: userCoins } = await supabase.from("msn_coins")
+      .select("id, coins")
+      .eq("user_id", user!.id)
+      .eq("is_converted", false)
+      .order("created_at", { ascending: true });
+
+    if (userCoins) {
+      for (const c of userCoins) {
+        if (toDeduct <= 0) break;
+        if (c.coins <= toDeduct) {
+          await supabase.from("msn_coins").update({ is_converted: true } as any).eq("id", c.id);
+          toDeduct -= c.coins;
+        } else {
+          await supabase.from("msn_coins").update({ coins: c.coins - toDeduct } as any).eq("id", c.id);
+          toDeduct = 0;
+        }
+      }
+    }
+  };
+
   const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pack || !profile) return;
 
-    if (Number(profile.wallet_balance) < Number(pack.price)) {
-      toast.error("Solde insuffisant ! Rechargez votre portefeuille.");
-      return;
+    // Validate payment method
+    if (paymentMethod === "wallet") {
+      if (Number(profile.wallet_balance) < Number(pack.price)) {
+        toast.error("Solde insuffisant ! Rechargez votre portefeuille.");
+        return;
+      }
+    } else {
+      if (!canPayWithMSN) {
+        toast.error(`Coins insuffisants ! Il faut ${coinsNeeded} coins, vous en avez ${msnCoins}.`);
+        return;
+      }
     }
 
     setSubmitting(true);
     setPurchaseStep("processing");
 
     try {
+      // Create order
       const { data: orderData, error: orderError } = await supabase
         .from("pack_orders")
         .insert({
@@ -95,14 +162,18 @@ const PackDetailPage = () => {
 
       if (orderError) throw new Error("Erreur commande: " + orderError.message);
 
-      const newBalance = Number(profile.wallet_balance) - Number(pack.price);
-      const profileUpdate: any = { wallet_balance: newBalance };
+      // Update profile (MLM activation + delivery address)
+      const profileUpdate: any = {};
       if (deliveryForm.address) profileUpdate.address = deliveryForm.address;
       if (deliveryForm.city) profileUpdate.city = deliveryForm.city;
       if (deliveryForm.street) profileUpdate.street = deliveryForm.street;
       if (deliveryForm.country) profileUpdate.country = deliveryForm.country;
       if (deliveryForm.phone) profileUpdate.phone = deliveryForm.phone;
       if (pack.is_mlm_pack) profileUpdate.is_mlm_active = true;
+
+      if (paymentMethod === "wallet") {
+        profileUpdate.wallet_balance = Number(profile.wallet_balance) - Number(pack.price);
+      }
 
       const { error: profileError } = await supabase
         .from("profiles")
@@ -111,19 +182,35 @@ const PackDetailPage = () => {
 
       if (profileError) throw new Error("Erreur portefeuille: " + profileError.message);
 
-      const { error: txError } = await supabase.from("transactions").insert({
-        user_id: user!.id,
-        amount: pack.price,
-        type: "pack_purchase" as const,
-        status: "approved" as const,
-        description: `Achat ${pack.is_mlm_pack ? "pack MLM" : "produit"}: ${pack.name}`,
-        metadata: { pack_id: pack.id, pack_name: pack.name, order_id: orderData?.id },
-        processed_at: new Date().toISOString(),
-      });
+      // Deduct MSN coins if paid with coins
+      if (paymentMethod === "msn") {
+        await deductMSNCoins(coinsNeeded);
+        // Record the conversion as a bonus transaction
+        await supabase.from("transactions").insert({
+          user_id: user!.id,
+          amount: pack.price,
+          type: "pack_purchase" as const,
+          status: "approved" as const,
+          description: `Achat pack "${pack.name}" avec ${coinsNeeded} MSN Coins`,
+          metadata: { pack_id: pack.id, pack_name: pack.name, order_id: orderData?.id, payment_method: "msn_coins", coins_used: coinsNeeded },
+          processed_at: new Date().toISOString(),
+        });
+      } else {
+        // Record wallet transaction
+        const { error: txError } = await supabase.from("transactions").insert({
+          user_id: user!.id,
+          amount: pack.price,
+          type: "pack_purchase" as const,
+          status: "approved" as const,
+          description: `Achat ${pack.is_mlm_pack ? "pack MLM" : "produit"}: ${pack.name}`,
+          metadata: { pack_id: pack.id, pack_name: pack.name, order_id: orderData?.id },
+          processed_at: new Date().toISOString(),
+        });
+        if (txError) throw new Error("Erreur transaction: " + txError.message);
+      }
 
-      if (txError) throw new Error("Erreur transaction: " + txError.message);
-
-      if (pack.is_mlm_pack && commissions.length > 0) {
+      // Distribute commissions automatically
+      if (pack.is_mlm_pack) {
         const { error: commError } = await supabase.rpc("distribute_commissions", {
           _buyer_user_id: user!.id,
           _pack_id: pack.id,
@@ -132,11 +219,12 @@ const PackDetailPage = () => {
         });
         if (commError) {
           console.error("Commission distribution error:", commError);
-          toast.warning("Achat réussi mais erreur de distribution des commissions.");
+          toast.warning("Achat réussi. Erreur partielle de distribution des commissions — l'admin sera notifié.");
         }
       }
 
-      if (orderData?.id) {
+      // Award MSN coins for the purchase (only if paid with wallet)
+      if (paymentMethod === "wallet" && orderData?.id) {
         const { error: coinError } = await supabase.rpc("award_msn_coins", {
           _buyer_user_id: user!.id,
           _order_id: orderData.id,
@@ -148,11 +236,8 @@ const PackDetailPage = () => {
       setPurchaseStep("done");
       toast.success("🌾 Achat effectué ! Téléchargez votre reçu ci-dessous.");
 
-      // Auto-trigger receipt download after a short delay
       setTimeout(() => {
-        if (orderData?.id) {
-          handleDownloadReceipt(orderData.id);
-        }
+        if (orderData?.id) handleDownloadReceipt(orderData.id);
         loadData();
       }, 800);
 
@@ -173,6 +258,7 @@ const PackDetailPage = () => {
 
   const images: string[] = pack.images || [];
   const totalCommission = commissions.reduce((sum: number, c: any) => sum + c.percentage, 0);
+  const xofRate = exchangeRates["XOF"] || 620;
 
   return (
     <DashboardLayout>
@@ -279,22 +365,44 @@ const PackDetailPage = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-2 mb-6 p-3 bg-secondary rounded-lg">
-            <span className="text-sm text-muted-foreground font-body">Votre solde :</span>
-            <span className="font-bold text-primary">{Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA</span>
-            {Number(profile.wallet_balance) < Number(pack.price) && (
-              <span className="text-xs text-destructive font-body ml-auto">Solde insuffisant</span>
-            )}
+          {/* Payment options summary */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="p-3 bg-secondary rounded-lg">
+              <div className="flex items-center gap-2 mb-1">
+                <Wallet className="w-4 h-4 text-primary" />
+                <span className="text-xs text-muted-foreground font-body">Portefeuille</span>
+              </div>
+              <p className={`font-bold text-sm ${Number(profile.wallet_balance) >= Number(pack.price) ? "text-harvest-green" : "text-destructive"}`}>
+                {Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA
+              </p>
+              {Number(profile.wallet_balance) < Number(pack.price) && (
+                <p className="text-[10px] text-destructive font-body">Insuffisant</p>
+              )}
+            </div>
+            <div className="p-3 bg-gradient-to-br from-primary/5 to-gold/5 rounded-lg border border-gold/20">
+              <div className="flex items-center gap-2 mb-1">
+                <Flame className="w-4 h-4 text-gold" />
+                <span className="text-xs text-muted-foreground font-body">MSN Coins</span>
+              </div>
+              <p className={`font-bold text-sm ${canPayWithMSN ? "text-harvest-green" : "text-muted-foreground"}`}>
+                {msnCoins} coins
+              </p>
+              <p className="text-[10px] text-muted-foreground font-body">
+                {coinsNeeded > 0 ? `Besoin: ${coinsNeeded} coins` : ""}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-3">
             <button
               onClick={() => setShowPurchase(true)}
-              disabled={Number(profile.wallet_balance) < Number(pack.price)}
+              disabled={Number(profile.wallet_balance) < Number(pack.price) && !canPayWithMSN}
               className="btn-gold w-full !py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ShoppingCart className="w-5 h-5 mr-2" />
-              {Number(profile.wallet_balance) < Number(pack.price) ? "Solde insuffisant" : "Acheter ce pack"}
+              {Number(profile.wallet_balance) < Number(pack.price) && !canPayWithMSN
+                ? "Solde insuffisant (portefeuille et coins)"
+                : "Acheter ce pack"}
             </button>
           </div>
         </div>
@@ -334,12 +442,11 @@ const PackDetailPage = () => {
                 </div>
                 <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Achat réussi ! 🌾</h2>
                 <p className="text-sm text-muted-foreground font-body mb-2">
-                  Votre commande a été enregistrée avec succès. Un reçu PDF s'ouvre automatiquement.
+                  Votre commande a été enregistrée. Un reçu PDF s'ouvre automatiquement.
                 </p>
                 <p className="text-xs text-muted-foreground font-body mb-6">
                   Référence : <span className="font-mono font-bold">{completedOrderId.slice(0, 16).toUpperCase()}</span>
                 </p>
-
                 <div className="space-y-3">
                   <button
                     onClick={() => handleDownloadReceipt(completedOrderId)}
@@ -365,23 +472,85 @@ const PackDetailPage = () => {
                   </button>
                 </div>
 
+                {/* Pack summary */}
                 <div className="bg-secondary rounded-xl p-4 mb-4">
                   <p className="font-heading font-semibold text-foreground">{pack.name}</p>
                   <p className="text-2xl font-bold text-primary">{Number(pack.price).toLocaleString("fr-FR")} FCFA</p>
-                  <p className="text-xs text-muted-foreground font-body mt-1">
-                    Solde après achat : {(Number(profile.wallet_balance) - Number(pack.price)).toLocaleString("fr-FR")} FCFA
-                  </p>
                   {pack.is_mlm_pack && commissions.length > 0 && (
                     <p className="text-xs text-harvest-green font-body mt-1">
-                      ✓ {commissions.length} niveau(x) de parrainage activé(s)
+                      ✓ {commissions.length} niveau(x) de parrainage — commissions distribuées automatiquement
                     </p>
                   )}
                 </div>
 
+                {/* Payment method selector */}
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-foreground mb-2 font-body">Mode de paiement</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("wallet")}
+                      disabled={Number(profile.wallet_balance) < Number(pack.price)}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-sm font-body disabled:opacity-40 ${
+                        paymentMethod === "wallet"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      <Wallet className="w-5 h-5" />
+                      <span className="font-semibold">Portefeuille</span>
+                      <span className="text-xs">{Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA</span>
+                      {Number(profile.wallet_balance) < Number(pack.price) && (
+                        <span className="text-[10px] text-destructive">Insuffisant</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("msn")}
+                      disabled={!canPayWithMSN}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all text-sm font-body disabled:opacity-40 ${
+                        paymentMethod === "msn"
+                          ? "border-gold bg-gold/10 text-gold"
+                          : "border-border text-muted-foreground hover:border-gold/50"
+                      }`}
+                    >
+                      <Flame className="w-5 h-5 text-gold" />
+                      <span className="font-semibold">MSN Coins</span>
+                      <span className="text-xs">{msnCoins} coins dispo</span>
+                      {coinsNeeded > 0 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {canPayWithMSN ? `Utilise ${coinsNeeded} coins` : `Besoin: ${coinsNeeded}`}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Selected payment summary */}
+                {paymentMethod === "wallet" && (
+                  <div className="bg-primary/5 rounded-lg p-3 mb-4 text-xs font-body">
+                    <p className="text-muted-foreground">Solde après achat :
+                      <span className="font-bold text-primary ml-1">
+                        {(Number(profile.wallet_balance) - Number(pack.price)).toLocaleString("fr-FR")} FCFA
+                      </span>
+                    </p>
+                  </div>
+                )}
+                {paymentMethod === "msn" && (
+                  <div className="bg-gold/5 rounded-lg p-3 mb-4 text-xs font-body border border-gold/20">
+                    <p className="text-muted-foreground">
+                      Paiement avec <span className="font-bold text-gold">{coinsNeeded} MSN Coins</span>
+                      {" "}(≈ {Math.round(coinValueInXOF(coinsNeeded)).toLocaleString("fr-FR")} FCFA)
+                    </p>
+                    <p className="text-muted-foreground mt-1">Coins restants : <span className="font-bold text-foreground">{msnCoins - coinsNeeded}</span></p>
+                    <p className="text-amber-600 mt-1">⚠️ Aucun MSN Coin ne sera attribué pour un achat avec coins</p>
+                  </div>
+                )}
+
                 <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-4 flex items-start gap-2">
                   <FileText className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <p className="text-xs font-body text-muted-foreground">
-                    Un <strong className="text-foreground">reçu d'achat + contrat de garantie PDF</strong> sera généré automatiquement après l'achat.
+                    Un <strong className="text-foreground">reçu d'achat + contrat de garantie PDF</strong> sera généré automatiquement.
                   </p>
                 </div>
 
@@ -406,14 +575,17 @@ const PackDetailPage = () => {
                     className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
 
                   <div className="flex gap-3 pt-2">
-                    <button type="submit" disabled={submitting || Number(profile.wallet_balance) < Number(pack.price)}
+                    <button type="submit" disabled={submitting || (paymentMethod === "wallet" && Number(profile.wallet_balance) < Number(pack.price)) || (paymentMethod === "msn" && !canPayWithMSN)}
                       className="flex-1 btn-gold !text-sm !py-2.5 disabled:opacity-50">
                       {submitting ? (
                         <span className="flex items-center gap-2">
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                           Traitement...
                         </span>
-                      ) : "Confirmer l'achat"}
+                      ) : paymentMethod === "msn"
+                        ? `🔥 Payer avec ${coinsNeeded} coins`
+                        : "Confirmer l'achat"
+                      }
                     </button>
                     <button type="button" onClick={() => { setShowPurchase(false); setPurchaseStep("form"); }}
                       className="px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary">
