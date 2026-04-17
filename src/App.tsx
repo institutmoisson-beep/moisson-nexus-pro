@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import MoissonneursPros from "./pages/MoissonneursPros";
 import Stand from "./pages/Stand";
 import MSNWallet from "./pages/MSNWallet";
+import MandateMarketplace from "./pages/MandateMarketplace";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/moissonneurs-pros" element={<MoissonneursPros />} />
             <Route path="/stand" element={<Stand />} />
+            <Route path="/vente-mandat" element={<MandateMarketplace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
