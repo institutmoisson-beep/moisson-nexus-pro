@@ -4,7 +4,7 @@ import { useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, Wallet, Package, Users, User, Shield,
-  LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase, Flame, HandshakeIcon
+  LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase, Flame, HandshakeIcon, Globe, MapPin
 } from "lucide-react";
 import InstallPWA from "@/components/InstallPWA";
 import logo from "@/assets/logo-moisson.png";
@@ -39,6 +39,8 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [staffRoles, setStaffRoles] = useState<string[]>([]);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [hasPaysRole, setHasPaysRole] = useState(false);
+  const [hasVilleRole, setHasVilleRole] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/connexion");
@@ -48,7 +50,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
     if (user) {
       supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => setIsAdmin(!!data));
       supabase.from("profiles").select("first_name, last_name").eq("user_id", user.id).single().then(({ data }) => setProfile(data));
-      supabase.from("staff_roles").select("role").eq("user_id", user.id).then(({ data }) => setStaffRoles((data || []).map((r: any) => r.role)));
+      supabase.from("staff_roles").select("role").eq("user_id", user.id).then(({ data }) => {
+        const roles = (data || []).map((r: any) => r.role);
+        setStaffRoles(roles);
+        setHasPaysRole(roles.includes("moissonneur_pays"));
+        setHasVilleRole(roles.includes("moissonneur_ville"));
+      });
     }
   }, [user]);
 
@@ -96,6 +103,16 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 <Briefcase className="w-4 h-4" /> Gestion
               </Link>
             )}
+            {hasPaysRole && (
+              <Link to="/moissonneur-pays" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-blue-500/10 text-blue-600 font-semibold hover:bg-blue-500/20 transition-colors">
+                <Globe className="w-4 h-4" /> Mon Pays
+              </Link>
+            )}
+            {hasVilleRole && (
+              <Link to="/moissonneur-ville" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-amber-500/10 text-amber-600 font-semibold hover:bg-amber-500/20 transition-colors">
+                <MapPin className="w-4 h-4" /> Ma Ville
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-3">
@@ -135,7 +152,19 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             {staffRoles.length > 0 && !isAdmin && (
               <Link to="/admin" onClick={() => setMobileMenu(false)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-primary/10 text-primary font-semibold">
-                <Briefcase className="w-4 h-4" /> Gestion ({staffRoles.map(r => STAFF_ROLE_LABELS[r] || r).join(", ")})
+                <Briefcase className="w-4 h-4" /> Gestion ({staffRoles.filter(r => !["moissonneur_pays","moissonneur_ville"].includes(r)).map(r => STAFF_ROLE_LABELS[r] || r).join(", ")})
+              </Link>
+            )}
+            {hasPaysRole && (
+              <Link to="/moissonneur-pays" onClick={() => setMobileMenu(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-blue-500/10 text-blue-600 font-semibold">
+                <Globe className="w-4 h-4" /> Moissonneur Pays
+              </Link>
+            )}
+            {hasVilleRole && (
+              <Link to="/moissonneur-ville" onClick={() => setMobileMenu(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-amber-500/10 text-amber-600 font-semibold">
+                <MapPin className="w-4 h-4" /> Moissonneur Ville
               </Link>
             )}
           </nav>
