@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ShoppingCart, ChevronLeft, ChevronRight, Download, FileText,
-  Clock, TrendingUp, Wallet, Flame, Coins, CheckCircle, X,
-  Package, Shield, Info, RefreshCw, AlertTriangle
+  Wallet, Flame, CheckCircle, X,
+  Package, Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -28,8 +28,16 @@ const MandateMarketplace = () => {
   const [coinUsdRate, setCoinUsdRate] = useState(1);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
 
-  useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
-  useEffect(() => { if (user) { loadData(); fetchRates(); } }, [user]);
+  useEffect(() => {
+    if (!loading && !user) navigate("/connexion");
+  }, [user, loading]);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+      fetchRates();
+    }
+  }, [user]);
 
   const loadData = async () => {
     const [packsRes, profileRes, subsRes, coinsRes, msnCfgRes] = await Promise.all([
@@ -53,7 +61,9 @@ const MandateMarketplace = () => {
       const res = await fetch("https://api.exchangerate-api.com/v4/latest/USD");
       const data = await res.json();
       setExchangeRates(data.rates || {});
-    } catch { setExchangeRates({ XOF: 620 }); }
+    } catch {
+      setExchangeRates({ XOF: 620 });
+    }
   };
 
   const coinValueXOF = coinUsdRate * (exchangeRates.XOF || 620);
@@ -99,7 +109,6 @@ const MandateMarketplace = () => {
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + (selectedPack.duration_days || 30));
 
-      // Create subscription
       const { data: subData, error: subErr } = await (supabase as any)
         .from("mandate_subscriptions")
         .insert({
@@ -118,12 +127,13 @@ const MandateMarketplace = () => {
 
       if (subErr) throw new Error(subErr.message);
 
-      // Deduct payment
       if (paymentMethod === "wallet") {
         await supabase.from("profiles").update({ wallet_balance: Number(profile.wallet_balance) - price }).eq("user_id", user!.id);
         await supabase.from("transactions").insert({
-          user_id: user!.id, amount: price,
-          type: "pack_purchase" as const, status: "approved" as const,
+          user_id: user!.id,
+          amount: price,
+          type: "pack_purchase" as const,
+          status: "approved" as const,
           description: `Souscription Mandat de Vente — Pack: ${selectedPack.name}`,
           metadata: { mandate_pack_id: selectedPack.id, subscription_id: subData?.id },
           processed_at: new Date().toISOString(),
@@ -131,15 +141,16 @@ const MandateMarketplace = () => {
       } else {
         await deductMSNCoins(coinsNeeded);
         await supabase.from("transactions").insert({
-          user_id: user!.id, amount: price,
-          type: "pack_purchase" as const, status: "approved" as const,
+          user_id: user!.id,
+          amount: price,
+          type: "pack_purchase" as const,
+          status: "approved" as const,
           description: `Souscription Mandat de Vente avec ${coinsNeeded} MSN Coins — Pack: ${selectedPack.name}`,
           metadata: { mandate_pack_id: selectedPack.id, subscription_id: subData?.id, coins_used: coinsNeeded },
           processed_at: new Date().toISOString(),
         });
       }
 
-      // Generate contract data
       const nextPayDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR");
       const contractData = {
         transactionId: subData?.id || "TMP",
@@ -159,8 +170,6 @@ const MandateMarketplace = () => {
 
       setPurchaseDone({ contractData, subscriptionId: subData?.id });
       await loadData();
-
-      // Auto-generate contract
       setTimeout(() => generateMandateContractPDF(contractData), 800);
       toast.success("🌾 Souscription réussie ! Votre contrat PDF est généré.");
     } catch (err: any) {
@@ -196,7 +205,6 @@ const MandateMarketplace = () => {
 
   return (
     <DashboardLayout>
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-heading font-bold text-foreground mb-2">🏬 Vente par Mandat</h1>
         <p className="text-muted-foreground font-body">
@@ -204,7 +212,6 @@ const MandateMarketplace = () => {
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 bg-secondary p-1 rounded-xl mb-6 w-fit">
         {[
           { key: "marketplace", label: "📦 Marketplace" },
@@ -220,7 +227,6 @@ const MandateMarketplace = () => {
       {/* ═══ MARKETPLACE ═══ */}
       {activeTab === "marketplace" && (
         <div>
-          {/* Info banner */}
           <div className="card-elevated border-primary/20 bg-gradient-to-r from-primary/5 to-gold/5 mb-6">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-gold flex items-center justify-center flex-shrink-0">
@@ -247,7 +253,6 @@ const MandateMarketplace = () => {
             </div>
           </div>
 
-          {/* Pack grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {packs.map(pack => {
               const totalComm = Math.floor((pack.duration_days || 30) / 3) * Number(pack.commission_every_3_days);
@@ -259,16 +264,12 @@ const MandateMarketplace = () => {
                   {pack.images?.[0] ? (
                     <div className="relative rounded-xl overflow-hidden aspect-video mb-4 bg-secondary">
                       <img src={pack.images[0]} alt={pack.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      <div className="absolute top-2 right-2 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">
-                        +{roi}% ROI
-                      </div>
+                      <div className="absolute top-2 right-2 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">+{roi}% ROI</div>
                     </div>
                   ) : (
                     <div className="relative rounded-xl aspect-video mb-4 bg-gradient-to-br from-primary/10 to-gold/10 flex items-center justify-center">
                       <Package className="w-12 h-12 text-primary/40" />
-                      <div className="absolute top-2 right-2 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">
-                        +{roi}% ROI
-                      </div>
+                      <div className="absolute top-2 right-2 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">+{roi}% ROI</div>
                     </div>
                   )}
                   <h3 className="font-heading font-bold text-foreground text-lg mb-1">{pack.name}</h3>
@@ -333,7 +334,6 @@ const MandateMarketplace = () => {
                   </div>
                 </div>
 
-                {/* Progress */}
                 <div className="mb-4">
                   <div className="flex justify-between text-xs text-muted-foreground font-body mb-1">
                     <span>Progression du mandat</span>
@@ -403,8 +403,7 @@ const MandateMarketplace = () => {
           onClick={() => setSelectedPack(null)}>
           <div className="bg-card w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl border border-border max-h-[90vh] flex flex-col"
             onClick={e => e.stopPropagation()}>
-            
-            {/* Images */}
+
             {selectedPack.images?.length > 0 && (
               <div className="relative h-52 bg-secondary flex-shrink-0 overflow-hidden">
                 <img src={selectedPack.images[imgIndex]} alt={selectedPack.name} className="w-full h-full object-cover" />
@@ -436,7 +435,6 @@ const MandateMarketplace = () => {
                 {selectedPack.description && <p className="text-sm text-muted-foreground font-body mt-2">{selectedPack.description}</p>}
               </div>
 
-              {/* Key numbers */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center">
                   <p className="text-xs text-muted-foreground font-body mb-1">Investissement</p>
@@ -462,7 +460,6 @@ const MandateMarketplace = () => {
                 </div>
               </div>
 
-              {/* What you get */}
               <div className="bg-secondary/50 rounded-xl p-4">
                 <h3 className="font-heading font-semibold text-foreground mb-3 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-primary" /> Ce que vous obtenez
@@ -471,7 +468,7 @@ const MandateMarketplace = () => {
                   <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Contrat juridique PDF signé — votre propriété légale</li>
                   <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Commissions automatiques toutes les 72 heures</li>
                   <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Suivi en temps réel de vos gains</li>
-                  <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Gestion complète par Institut Moisson (stockage, vente, distribution)</li>
+                  <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Gestion complète par Institut Moisson</li>
                 </ul>
               </div>
             </div>
@@ -500,7 +497,7 @@ const MandateMarketplace = () => {
         <div className="fixed inset-0 bg-foreground/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
           <div className="bg-card w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-border"
             onClick={e => e.stopPropagation()}>
-            
+
             {purchaseDone ? (
               <div className="p-8 text-center">
                 <div className="w-20 h-20 rounded-full bg-harvest-green/10 flex items-center justify-center mx-auto mb-4">
@@ -508,8 +505,7 @@ const MandateMarketplace = () => {
                 </div>
                 <h3 className="text-2xl font-heading font-bold text-foreground mb-2">Mandat souscrit ! 🌾</h3>
                 <p className="text-sm text-muted-foreground font-body mb-6">
-                  Votre contrat juridique PDF a été généré automatiquement.
-                  Les commissions démarrent dans 3 jours.
+                  Votre contrat juridique PDF a été généré automatiquement. Les commissions démarrent dans 3 jours.
                 </p>
                 <div className="space-y-3">
                   <button
@@ -545,7 +541,6 @@ const MandateMarketplace = () => {
                 </div>
 
                 <div className="p-6 space-y-4">
-                  {/* Payment method */}
                   <div>
                     <p className="text-sm font-medium text-foreground mb-2 font-body">Mode de paiement</p>
                     <div className="grid grid-cols-2 gap-2">
@@ -566,11 +561,10 @@ const MandateMarketplace = () => {
                     </div>
                   </div>
 
-                  {/* Legal notice */}
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
                     <FileText className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                     <p className="text-xs font-body text-blue-700">
-                      Un <strong>contrat juridique PDF</strong> sera généré automatiquement et disponible immédiatement au téléchargement.
+                      Un <strong>contrat juridique PDF</strong> sera généré automatiquement et disponible immédiatement.
                     </p>
                   </div>
 
