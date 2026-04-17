@@ -7,7 +7,7 @@ import logo from "@/assets/logo-moisson.png";
 import {
   Users, Package, Building2, CreditCard, TrendingUp, Award,
   LogOut, ArrowLeft, Wallet, FolderOpen, UserCheck,
-  Menu, X, ShoppingBag, Settings2, Flame
+  Menu, X, ShoppingBag, Settings2, Flame, HandshakeIcon
 } from "lucide-react";
 import AdminOverview from "@/components/admin/AdminOverview";
 import AdminUsers from "@/components/admin/AdminUsers";
@@ -23,18 +23,20 @@ import AdminOrders from "@/components/admin/AdminOrders";
 import AdminFees from "@/components/admin/AdminFees";
 import AdminMSN from "@/components/admin/AdminMSN";
 import AdminMSNWithdrawals from "@/components/admin/AdminMSNWithdrawals";
+import AdminMandatePacks from "@/components/admin/AdminMandatePacks";
 
 type AdminTab =
   | "overview" | "users" | "packs" | "sectors" | "partners"
   | "transactions" | "payments" | "commissions" | "bonuses"
-  | "pro_directory" | "orders" | "fees" | "msn_plan" | "msn_withdrawals";
+  | "pro_directory" | "orders" | "fees" | "msn_plan" | "msn_withdrawals"
+  | "mandate_packs";
 
 const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
   financier: ["overview", "transactions", "payments", "commissions", "bonuses", "fees", "msn_withdrawals"],
-  gestion_packs: ["overview", "packs", "sectors", "orders", "commissions"],
+  gestion_packs: ["overview", "packs", "sectors", "orders", "commissions", "mandate_packs"],
   gestion_stand: ["overview", "partners", "orders"],
-  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan", "msn_withdrawals"],
-  commercial: ["overview", "users", "pro_directory", "orders"],
+  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan", "msn_withdrawals", "mandate_packs"],
+  commercial: ["overview", "users", "pro_directory", "orders", "mandate_packs"],
   communication: ["overview", "partners", "pro_directory"],
 };
 
@@ -43,6 +45,7 @@ const ALL_TABS: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
   { key: "users", label: "Utilisateurs", icon: <Users className="w-4 h-4" /> },
   { key: "pro_directory", label: "Moissonneurs Pros", icon: <UserCheck className="w-4 h-4" /> },
   { key: "packs", label: "Packs", icon: <Package className="w-4 h-4" /> },
+  { key: "mandate_packs", label: "Vente par Mandat 🏬", icon: <HandshakeIcon className="w-4 h-4" /> },
   { key: "sectors", label: "Secteurs", icon: <FolderOpen className="w-4 h-4" /> },
   { key: "partners", label: "Partenaires", icon: <Building2 className="w-4 h-4" /> },
   { key: "orders", label: "Commandes", icon: <ShoppingBag className="w-4 h-4" /> },
@@ -71,7 +74,7 @@ const AdminDashboard = () => {
       Promise.all([
         supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
         supabase.from("staff_roles").select("role").eq("user_id", user.id),
-        supabase.from("msn_withdrawals" as any).select("id", { count: "exact", head: true }).eq("status", "pending"),
+        (supabase as any).from("msn_withdrawals").select("id", { count: "exact", head: true }).eq("status", "pending"),
       ]).then(([adminRes, staffRes, wdRes]) => {
         const admin = !!adminRes.data;
         const roles = (staffRes.data || []).map((r: any) => r.role);
@@ -192,6 +195,7 @@ const AdminDashboard = () => {
           {activeTab === "fees" && <AdminFees />}
           {activeTab === "msn_plan" && <AdminMSN />}
           {activeTab === "msn_withdrawals" && <AdminMSNWithdrawals />}
+          {activeTab === "mandate_packs" && <AdminMandatePacks />}
         </main>
       </div>
     </div>
