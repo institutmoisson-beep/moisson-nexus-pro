@@ -7,7 +7,7 @@ import logo from "@/assets/logo-moisson.png";
 import {
   Users, Package, Building2, CreditCard, TrendingUp, Award,
   LogOut, ArrowLeft, Wallet, FolderOpen, UserCheck,
-  Menu, X, ShoppingBag, Settings2, Flame, HandshakeIcon
+  Menu, X, ShoppingBag, Settings2, Flame, HandshakeIcon, Globe
 } from "lucide-react";
 import AdminOverview from "@/components/admin/AdminOverview";
 import AdminUsers from "@/components/admin/AdminUsers";
@@ -24,18 +24,19 @@ import AdminFees from "@/components/admin/AdminFees";
 import AdminMSN from "@/components/admin/AdminMSN";
 import AdminMSNWithdrawals from "@/components/admin/AdminMSNWithdrawals";
 import AdminMandatePacks from "@/components/admin/AdminMandatePacks";
+import AdminRegionalRoles from "@/components/admin/AdminRegionalRoles";
 
 type AdminTab =
   | "overview" | "users" | "packs" | "sectors" | "partners"
   | "transactions" | "payments" | "commissions" | "bonuses"
   | "pro_directory" | "orders" | "fees" | "msn_plan" | "msn_withdrawals"
-  | "mandate_packs";
+  | "mandate_packs" | "regional_roles";
 
 const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
   financier: ["overview", "transactions", "payments", "commissions", "bonuses", "fees", "msn_withdrawals"],
   gestion_packs: ["overview", "packs", "sectors", "orders", "commissions", "mandate_packs"],
   gestion_stand: ["overview", "partners", "orders"],
-  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan", "msn_withdrawals", "mandate_packs"],
+  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan", "msn_withdrawals", "mandate_packs", "regional_roles"],
   commercial: ["overview", "users", "pro_directory", "orders", "mandate_packs"],
   communication: ["overview", "partners", "pro_directory"],
 };
@@ -56,6 +57,7 @@ const ALL_TABS: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
   { key: "fees", label: "Frais & Config", icon: <Settings2 className="w-4 h-4" /> },
   { key: "msn_plan", label: "Plan MSN 🔥", icon: <TrendingUp className="w-4 h-4" /> },
   { key: "msn_withdrawals", label: "Retraits MSN 🔥", icon: <Flame className="w-4 h-4" /> },
+  { key: "regional_roles", label: "Rôles Régionaux 🌍", icon: <Globe className="w-4 h-4" /> }, // + AJOUTER
 ];
 
 const AdminDashboard = () => {
@@ -78,12 +80,14 @@ const AdminDashboard = () => {
       ]).then(([adminRes, staffRes, wdRes]) => {
         const admin = !!adminRes.data;
         const roles = (staffRes.data || []).map((r: any) => r.role);
-        if (!admin && roles.length === 0) {
+        // Filter out regional roles from staff access check
+        const nonRegionalRoles = roles.filter((r: string) => !["moissonneur_pays", "moissonneur_ville"].includes(r));
+        if (!admin && nonRegionalRoles.length === 0) {
           toast.error("Accès refusé");
           navigate("/dashboard");
         } else {
           setIsAdmin(admin);
-          setStaffRoles(roles);
+          setStaffRoles(nonRegionalRoles);
         }
         setPendingMsnWithdrawals((wdRes as any).count || 0);
         setCheckingRole(false);
@@ -196,6 +200,7 @@ const AdminDashboard = () => {
           {activeTab === "msn_plan" && <AdminMSN />}
           {activeTab === "msn_withdrawals" && <AdminMSNWithdrawals />}
           {activeTab === "mandate_packs" && <AdminMandatePacks />}
+          {activeTab === "regional_roles" && <AdminRegionalRoles />}
         </main>
       </div>
     </div>
