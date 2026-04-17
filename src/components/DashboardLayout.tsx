@@ -4,7 +4,7 @@ import { useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, Wallet, Package, Users, User, Shield,
-  LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase, Flame
+  LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase, Flame, HandshakeIcon
 } from "lucide-react";
 import InstallPWA from "@/components/InstallPWA";
 import logo from "@/assets/logo-moisson.png";
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { path: "/portefeuille", label: "Portefeuille", icon: Wallet },
   { path: "/msn-wallet", label: "MSN Coins 🔥", icon: Flame },
   { path: "/packs", label: "Packs", icon: Package },
+  { path: "/vente-mandat", label: "Vente Mandat 🏬", icon: HandshakeIcon },
   { path: "/commandes", label: "Commandes", icon: ShoppingBag },
   { path: "/reseau", label: "Mon Réseau", icon: Users },
   { path: "/profil", label: "Profil", icon: User },
@@ -78,6 +79,8 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                     ? "bg-primary text-primary-foreground font-semibold"
                     : item.path === "/msn-wallet"
                     ? "text-gold hover:bg-gold/10 hover:text-gold font-medium"
+                    : item.path === "/vente-mandat"
+                    ? "text-harvest-green hover:bg-harvest-green/10 hover:text-harvest-green font-medium"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}>
                 <item.icon className="w-4 h-4" /> {item.label}
@@ -116,6 +119,8 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                     ? "bg-primary text-primary-foreground font-semibold"
                     : item.path === "/msn-wallet"
                     ? "text-gold hover:bg-gold/10 font-medium"
+                    : item.path === "/vente-mandat"
+                    ? "text-harvest-green hover:bg-harvest-green/10 font-medium"
                     : "text-muted-foreground hover:bg-secondary"
                 }`}>
                 <item.icon className="w-4 h-4" /> {item.label}
