@@ -15,7 +15,7 @@ export interface MandateContractData {
 }
 
 export const generateMandateContractPDF = (data: MandateContractData): void => {
-  const contractRef = MSN-MAND-${data.transactionId.slice(0, 8).toUpperCase()};
+  const contractRef = `MSN-MAND-${data.transactionId.slice(0, 8).toUpperCase()}`;
   const endDate = new Date(data.purchaseDate);
   endDate.setDate(endDate.getDate() + data.durationDays);
   const endDateStr = endDate.toLocaleDateString("fr-FR", {
@@ -32,7 +32,7 @@ export const generateMandateContractPDF = (data: MandateContractData): void => {
     Math.floor(data.durationDays / 3) * data.commissionEvery3Days;
   const paymentMethodLabel =
     data.paymentMethod === "msn"
-      ? MSN Coins (${data.coinsUsed} coins)
+      ? `MSN Coins (${data.coinsUsed} coins)`
       : "Portefeuille FCFA";
 
   const html = `<!DOCTYPE html>
@@ -136,7 +136,7 @@ export const generateMandateContractPDF = (data: MandateContractData): void => {
     <div class="party-label">Le Déposant</div>
     <div class="party-name">${data.userName}</div>
     <div class="party-role">Investisseur Moissonneur</div>
-    <div class="party-detail">${data.userEmail}${data.userCity ? <br/>${data.userCity}${data.userCountry ? ", " + data.userCountry : ""} : ""}</div>
+    <div class="party-detail">${data.userEmail}${data.userCity ? `<br/>${data.userCity}${data.userCountry ? ", " + data.userCountry : ""}` : ""}</div>
   </div>
 </div>
 
