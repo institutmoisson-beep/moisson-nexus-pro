@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hors ligne — Institut Moisson</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: #f5f3ff;
+    color: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .card {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 3rem 2.5rem;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 8px 40px -8px rgba(124,58,237,0.15);
+    border: 1px solid #e0d4f5;
+  }
+  .icon { font-size: 4rem; margin-bottom: 1.5rem; }
+  h1 { font-size: 1.5rem; font-weight: 700; color: #7c3aed; margin-bottom: 0.75rem; }
+  p { font-size: 0.95rem; color: #64748b; line-height: 1.6; margin-bottom: 1.5rem; }
+  button {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.2s;
+  }
+  button:hover { opacity: 0.9; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">📡</div>
+  <h1>Vous êtes hors ligne</h1>
+  <p>Vérifiez votre connexion internet et réessayez.<br />Vos données locales sont préservées.</p>
+  <button onclick="window.location.reload()">🔄 Réessayer</button>
+</div>
+</body>
+</html>
