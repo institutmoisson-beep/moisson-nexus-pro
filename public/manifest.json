@@ -1,24 +1,87 @@
 {
   "name": "Institut Moisson",
   "short_name": "Moisson",
-  "description": "La communauté des Moissonneurs. Unis pour prospérer ensemble.",
-  "start_url": "/",
+  "description": "Plateforme de solidarité et de prospérité — Institut Moisson",
+  "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#0F0A1A",
-  "theme_color": "#7C3AED",
+  "background_color": "#f5f3ff",
+  "theme_color": "#7c3aed",
   "orientation": "portrait-primary",
+  "lang": "fr",
+  "categories": ["finance", "business", "social"],
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Tableau de bord",
+      "short_name": "Dashboard",
+      "description": "Accéder à votre tableau de bord",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Portefeuille",
+      "short_name": "Wallet",
+      "description": "Gérer votre portefeuille",
+      "url": "/portefeuille",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "MSN Coins",
+      "short_name": "Coins",
+      "description": "Vos MSN Coins",
+      "url": "/msn-wallet",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "prefer_related_applications": false
 }
