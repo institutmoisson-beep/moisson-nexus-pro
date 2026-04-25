@@ -7,57 +7,63 @@ import logo from "@/assets/logo-moisson.png";
 import {
   Users, Package, Building2, CreditCard, TrendingUp, Award,
   LogOut, ArrowLeft, Wallet, FolderOpen, UserCheck,
-  Menu, X, ShoppingBag, Settings2, Flame, HandshakeIcon, Globe
+  Menu, X, ShoppingBag, Settings2, Flame, HandshakeIcon, Globe, Briefcase
 } from "lucide-react";
-import AdminOverview from "@/components/admin/AdminOverview";
-import AdminUsers from "@/components/admin/AdminUsers";
-import AdminTransactions from "@/components/admin/AdminTransactions";
-import AdminPacks from "@/components/admin/AdminPacks";
-import AdminPartners from "@/components/admin/AdminPartners";
-import AdminPayments from "@/components/admin/AdminPayments";
-import AdminCommissions from "@/components/admin/AdminCommissions";
-import AdminBonuses from "@/components/admin/AdminBonuses";
-import AdminSectors from "@/components/admin/AdminSectors";
-import AdminProDirectory from "@/components/admin/AdminProDirectory";
-import AdminOrders from "@/components/admin/AdminOrders";
-import AdminFees from "@/components/admin/AdminFees";
-import AdminMSN from "@/components/admin/AdminMSN";
-import AdminMSNWithdrawals from "@/components/admin/AdminMSNWithdrawals";
-import AdminMandatePacks from "@/components/admin/AdminMandatePacks";
-import AdminRegionalRoles from "@/components/admin/AdminRegionalRoles";
+import AdminOverview          from "@/components/admin/AdminOverview";
+import AdminUsers             from "@/components/admin/AdminUsers";
+import AdminTransactions      from "@/components/admin/AdminTransactions";
+import AdminPacks             from "@/components/admin/AdminPacks";
+import AdminPartners          from "@/components/admin/AdminPartners";
+import AdminPayments          from "@/components/admin/AdminPayments";
+import AdminCommissions       from "@/components/admin/AdminCommissions";
+import AdminBonuses           from "@/components/admin/AdminBonuses";
+import AdminSectors           from "@/components/admin/AdminSectors";
+import AdminProDirectory      from "@/components/admin/AdminProDirectory";
+import AdminOrders            from "@/components/admin/AdminOrders";
+import AdminFees              from "@/components/admin/AdminFees";
+import AdminMSN               from "@/components/admin/AdminMSN";
+import AdminMSNWithdrawals    from "@/components/admin/AdminMSNWithdrawals";
+import AdminMandatePacks      from "@/components/admin/AdminMandatePacks";
+import AdminRegionalRoles     from "@/components/admin/AdminRegionalRoles";
+import AdminPorteurAffaires   from "@/components/admin/AdminPorteurAffaires";
 
 type AdminTab =
   | "overview" | "users" | "packs" | "sectors" | "partners"
   | "transactions" | "payments" | "commissions" | "bonuses"
   | "pro_directory" | "orders" | "fees" | "msn_plan" | "msn_withdrawals"
-  | "mandate_packs" | "regional_roles";
+  | "mandate_packs" | "regional_roles" | "porteur_affaires";
 
 const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
-  financier: ["overview", "transactions", "payments", "commissions", "bonuses", "fees", "msn_withdrawals"],
-  gestion_packs: ["overview", "packs", "sectors", "orders", "commissions", "mandate_packs"],
+  financier:     ["overview", "transactions", "payments", "commissions", "bonuses", "fees", "msn_withdrawals"],
+  gestion_packs: ["overview", "packs", "sectors", "orders", "commissions", "mandate_packs", "porteur_affaires"],
   gestion_stand: ["overview", "partners", "orders"],
-  informaticien: ["overview", "users", "packs", "sectors", "partners", "transactions", "payments", "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan", "msn_withdrawals", "mandate_packs", "regional_roles"],
-  commercial: ["overview", "users", "pro_directory", "orders", "mandate_packs"],
+  informaticien: [
+    "overview", "users", "packs", "sectors", "partners", "transactions", "payments",
+    "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan",
+    "msn_withdrawals", "mandate_packs", "regional_roles", "porteur_affaires",
+  ],
+  commercial:    ["overview", "users", "pro_directory", "orders", "mandate_packs", "porteur_affaires"],
   communication: ["overview", "partners", "pro_directory"],
 };
 
 const ALL_TABS: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
-  { key: "overview", label: "Vue d'ensemble", icon: <TrendingUp className="w-4 h-4" /> },
-  { key: "users", label: "Utilisateurs", icon: <Users className="w-4 h-4" /> },
-  { key: "pro_directory", label: "Moissonneurs Pros", icon: <UserCheck className="w-4 h-4" /> },
-  { key: "packs", label: "Packs", icon: <Package className="w-4 h-4" /> },
-  { key: "mandate_packs", label: "Vente par Mandat 🏬", icon: <HandshakeIcon className="w-4 h-4" /> },
-  { key: "sectors", label: "Secteurs", icon: <FolderOpen className="w-4 h-4" /> },
-  { key: "partners", label: "Partenaires", icon: <Building2 className="w-4 h-4" /> },
-  { key: "orders", label: "Commandes", icon: <ShoppingBag className="w-4 h-4" /> },
-  { key: "transactions", label: "Transactions", icon: <CreditCard className="w-4 h-4" /> },
-  { key: "payments", label: "Moyens de paiement", icon: <Wallet className="w-4 h-4" /> },
-  { key: "commissions", label: "Commissions", icon: <TrendingUp className="w-4 h-4" /> },
-  { key: "bonuses", label: "Bonus carrière", icon: <Award className="w-4 h-4" /> },
-  { key: "fees", label: "Frais & Config", icon: <Settings2 className="w-4 h-4" /> },
-  { key: "msn_plan", label: "Plan MSN 🔥", icon: <TrendingUp className="w-4 h-4" /> },
-  { key: "msn_withdrawals", label: "Retraits MSN 🔥", icon: <Flame className="w-4 h-4" /> },
-  { key: "regional_roles", label: "Rôles Régionaux 🌍", icon: <Globe className="w-4 h-4" /> }, // + AJOUTER
+  { key: "overview",          label: "Vue d'ensemble",          icon: <TrendingUp className="w-4 h-4" /> },
+  { key: "users",             label: "Utilisateurs",            icon: <Users className="w-4 h-4" /> },
+  { key: "pro_directory",     label: "Moissonneurs Pros",       icon: <UserCheck className="w-4 h-4" /> },
+  { key: "packs",             label: "Packs",                   icon: <Package className="w-4 h-4" /> },
+  { key: "mandate_packs",     label: "Vente par Mandat 🏬",     icon: <HandshakeIcon className="w-4 h-4" /> },
+  { key: "porteur_affaires",  label: "🌾 Porteurs d'Affaires",  icon: <Briefcase className="w-4 h-4" /> },
+  { key: "sectors",           label: "Secteurs",                icon: <FolderOpen className="w-4 h-4" /> },
+  { key: "partners",          label: "Partenaires",             icon: <Building2 className="w-4 h-4" /> },
+  { key: "orders",            label: "Commandes",               icon: <ShoppingBag className="w-4 h-4" /> },
+  { key: "transactions",      label: "Transactions",            icon: <CreditCard className="w-4 h-4" /> },
+  { key: "payments",          label: "Moyens de paiement",      icon: <Wallet className="w-4 h-4" /> },
+  { key: "commissions",       label: "Commissions",             icon: <TrendingUp className="w-4 h-4" /> },
+  { key: "bonuses",           label: "Bonus carrière",          icon: <Award className="w-4 h-4" /> },
+  { key: "fees",              label: "Frais & Config",          icon: <Settings2 className="w-4 h-4" /> },
+  { key: "msn_plan",          label: "Plan MSN 🔥",             icon: <TrendingUp className="w-4 h-4" /> },
+  { key: "msn_withdrawals",   label: "Retraits MSN 🔥",         icon: <Flame className="w-4 h-4" /> },
+  { key: "regional_roles",    label: "Rôles Régionaux 🌍",      icon: <Globe className="w-4 h-4" /> },
 ];
 
 const AdminDashboard = () => {
@@ -69,6 +75,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingMsnWithdrawals, setPendingMsnWithdrawals] = useState(0);
+  const [pendingPorteurOrders, setPendingPorteurOrders] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) { navigate("/connexion"); return; }
@@ -77,10 +84,10 @@ const AdminDashboard = () => {
         supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
         supabase.from("staff_roles").select("role").eq("user_id", user.id),
         (supabase as any).from("msn_withdrawals").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      ]).then(([adminRes, staffRes, wdRes]) => {
+        (supabase as any).from("business_orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      ]).then(([adminRes, staffRes, wdRes, porteurRes]) => {
         const admin = !!adminRes.data;
         const roles = (staffRes.data || []).map((r: any) => r.role);
-        // Filter out regional roles from staff access check
         const nonRegionalRoles = roles.filter((r: string) => !["moissonneur_pays", "moissonneur_ville"].includes(r));
         if (!admin && nonRegionalRoles.length === 0) {
           toast.error("Accès refusé");
@@ -90,6 +97,7 @@ const AdminDashboard = () => {
           setStaffRoles(nonRegionalRoles);
         }
         setPendingMsnWithdrawals((wdRes as any).count || 0);
+        setPendingPorteurOrders((porteurRes as any).count || 0);
         setCheckingRole(false);
       });
     }
@@ -118,8 +126,17 @@ const AdminDashboard = () => {
     setSidebarOpen(false);
   };
 
+  const getBadge = (key: AdminTab) => {
+    if (key === "msn_withdrawals" && pendingMsnWithdrawals > 0)
+      return <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pendingMsnWithdrawals}</span>;
+    if (key === "porteur_affaires" && pendingPorteurOrders > 0)
+      return <span className="ml-auto bg-gold text-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pendingPorteurOrders}</span>;
+    return null;
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      {/* ── HEADER ── */}
       <header className="border-b border-border bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -132,10 +149,12 @@ const AdminDashboard = () => {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/dashboard")} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-body">
+            <button onClick={() => navigate("/dashboard")}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-body">
               <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Tableau de bord</span>
             </button>
-            <button onClick={async () => { await signOut(); navigate("/"); }} className="text-muted-foreground hover:text-foreground transition-colors">
+            <button onClick={async () => { await signOut(); navigate("/"); }}
+              className="text-muted-foreground hover:text-foreground transition-colors">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
@@ -143,24 +162,24 @@ const AdminDashboard = () => {
       </header>
 
       <div className="flex relative">
+        {/* ── SIDEBAR DESKTOP ── */}
         <aside className="w-56 min-h-[calc(100vh-57px)] border-r border-border bg-card p-3 hidden md:block shrink-0">
           <nav className="space-y-0.5">
             {allowedTabs.map(tab => (
               <button key={tab.key} onClick={() => handleTabClick(tab.key)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-body transition-all relative ${
-                  activeTab === tab.key ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  activeTab === tab.key
+                    ? "bg-primary text-primary-foreground font-semibold"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}>
                 {tab.icon} {tab.label}
-                {tab.key === "msn_withdrawals" && pendingMsnWithdrawals > 0 && (
-                  <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                    {pendingMsnWithdrawals}
-                  </span>
-                )}
+                {getBadge(tab.key)}
               </button>
             ))}
           </nav>
         </aside>
 
+        {/* ── SIDEBAR MOBILE ── */}
         {sidebarOpen && (
           <div className="md:hidden fixed inset-0 top-[57px] z-40">
             <div className="absolute inset-0 bg-foreground/30" onClick={() => setSidebarOpen(false)} />
@@ -169,14 +188,12 @@ const AdminDashboard = () => {
                 {allowedTabs.map(tab => (
                   <button key={tab.key} onClick={() => handleTabClick(tab.key)}
                     className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-body transition-all relative ${
-                      activeTab === tab.key ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      activeTab === tab.key
+                        ? "bg-primary text-primary-foreground font-semibold"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     }`}>
                     {tab.icon} {tab.label}
-                    {tab.key === "msn_withdrawals" && pendingMsnWithdrawals > 0 && (
-                      <span className="ml-auto bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                        {pendingMsnWithdrawals}
-                      </span>
-                    )}
+                    {getBadge(tab.key)}
                   </button>
                 ))}
               </nav>
@@ -184,23 +201,25 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* ── CONTENU ── */}
         <main className="flex-1 p-4 md:p-6 overflow-auto min-h-[calc(100vh-57px)]">
-          {activeTab === "overview" && <AdminOverview />}
-          {activeTab === "users" && <AdminUsers />}
-          {activeTab === "pro_directory" && <AdminProDirectory />}
-          {activeTab === "transactions" && <AdminTransactions />}
-          {activeTab === "packs" && <AdminPacks />}
-          {activeTab === "sectors" && <AdminSectors />}
-          {activeTab === "partners" && <AdminPartners />}
-          {activeTab === "orders" && <AdminOrders />}
-          {activeTab === "payments" && <AdminPayments />}
-          {activeTab === "commissions" && <AdminCommissions />}
-          {activeTab === "bonuses" && <AdminBonuses />}
-          {activeTab === "fees" && <AdminFees />}
-          {activeTab === "msn_plan" && <AdminMSN />}
-          {activeTab === "msn_withdrawals" && <AdminMSNWithdrawals />}
-          {activeTab === "mandate_packs" && <AdminMandatePacks />}
-          {activeTab === "regional_roles" && <AdminRegionalRoles />}
+          {activeTab === "overview"         && <AdminOverview />}
+          {activeTab === "users"            && <AdminUsers />}
+          {activeTab === "pro_directory"    && <AdminProDirectory />}
+          {activeTab === "transactions"     && <AdminTransactions />}
+          {activeTab === "packs"            && <AdminPacks />}
+          {activeTab === "sectors"          && <AdminSectors />}
+          {activeTab === "partners"         && <AdminPartners />}
+          {activeTab === "orders"           && <AdminOrders />}
+          {activeTab === "payments"         && <AdminPayments />}
+          {activeTab === "commissions"      && <AdminCommissions />}
+          {activeTab === "bonuses"          && <AdminBonuses />}
+          {activeTab === "fees"             && <AdminFees />}
+          {activeTab === "msn_plan"         && <AdminMSN />}
+          {activeTab === "msn_withdrawals"  && <AdminMSNWithdrawals />}
+          {activeTab === "mandate_packs"    && <AdminMandatePacks />}
+          {activeTab === "regional_roles"   && <AdminRegionalRoles />}
+          {activeTab === "porteur_affaires" && <AdminPorteurAffaires />}
         </main>
       </div>
     </div>
