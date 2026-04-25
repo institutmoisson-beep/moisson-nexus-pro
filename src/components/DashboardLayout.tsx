@@ -4,31 +4,40 @@ import { useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, Wallet, Package, Users, User, Shield,
-  LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase, Flame, HandshakeIcon, Globe, MapPin
+  LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase,
+  Flame, HandshakeIcon, Globe, MapPin
 } from "lucide-react";
 import InstallPWA from "@/components/InstallPWA";
 import logo from "@/assets/logo-moisson.png";
 
 const NAV_ITEMS = [
-  { path: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { path: "/portefeuille", label: "Portefeuille", icon: Wallet },
-  { path: "/msn-wallet", label: "MSN Coins 🔥", icon: Flame },
-  { path: "/packs", label: "Packs", icon: Package },
-  { path: "/vente-mandat", label: "Vente Mandat 🏬", icon: HandshakeIcon },
-  { path: "/commandes", label: "Commandes", icon: ShoppingBag },
-  { path: "/reseau", label: "Mon Réseau", icon: Users },
-  { path: "/profil", label: "Profil", icon: User },
-  { path: "/moissonneurs-pros", label: "Pros", icon: UserCheck },
-  { path: "/stand", label: "Stand", icon: Store },
+  { path: "/dashboard",         label: "Tableau de bord",        icon: LayoutDashboard },
+  { path: "/portefeuille",      label: "Portefeuille",           icon: Wallet },
+  { path: "/msn-wallet",        label: "MSN Coins 🔥",           icon: Flame },
+  { path: "/packs",             label: "Packs",                  icon: Package },
+  { path: "/vente-mandat",      label: "Vente Mandat 🏬",        icon: HandshakeIcon },
+  { path: "/porteur-affaires",  label: "🌾 Porteur d'Affaires",  icon: Briefcase },
+  { path: "/commandes",         label: "Commandes",              icon: ShoppingBag },
+  { path: "/reseau",            label: "Mon Réseau",             icon: Users },
+  { path: "/profil",            label: "Profil",                 icon: User },
+  { path: "/moissonneurs-pros", label: "Pros",                   icon: UserCheck },
+  { path: "/stand",             label: "Stand",                  icon: Store },
 ];
 
 const STAFF_ROLE_LABELS: Record<string, string> = {
-  financier: "Financier",
-  gestion_packs: "Gestion Packs",
-  gestion_stand: "Gestion Stand",
-  informaticien: "Informaticien",
-  commercial: "Commercial",
-  communication: "Communication",
+  financier:      "Financier",
+  gestion_packs:  "Gestion Packs",
+  gestion_stand:  "Gestion Stand",
+  informaticien:  "Informaticien",
+  commercial:     "Commercial",
+  communication:  "Communication",
+};
+
+// Chemins avec couleur spéciale
+const SPECIAL_PATHS: Record<string, string> = {
+  "/msn-wallet":       "text-gold hover:bg-gold/10 hover:text-gold font-medium",
+  "/vente-mandat":     "text-harvest-green hover:bg-harvest-green/10 hover:text-harvest-green font-medium",
+  "/porteur-affaires": "text-primary hover:bg-primary/10 hover:text-primary font-medium",
 };
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
@@ -64,12 +73,22 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
     navigate("/");
   };
 
+  const getLinkClass = (path: string, isActive: boolean) => {
+    if (isActive) return "bg-primary text-primary-foreground font-semibold";
+    if (SPECIAL_PATHS[path]) return SPECIAL_PATHS[path];
+    return "text-muted-foreground hover:bg-secondary hover:text-foreground";
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      {/* ── HEADER ── */}
       <header className="border-b border-border bg-card sticky top-0 z-50">
         <div className="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden p-1.5 rounded-lg hover:bg-secondary">
+            <button
+              onClick={() => setMobileMenu(!mobileMenu)}
+              className="md:hidden p-1.5 rounded-lg hover:bg-secondary"
+            >
               {mobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <Link to="/dashboard" className="flex items-center gap-2">
@@ -78,38 +97,39 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             </Link>
           </div>
 
+          {/* ── NAV DESKTOP ── */}
           <nav className="hidden md:flex items-center gap-1">
             {NAV_ITEMS.map(item => (
-              <Link key={item.path} to={item.path}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body transition-colors ${
-                  location.pathname === item.path
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : item.path === "/msn-wallet"
-                    ? "text-gold hover:bg-gold/10 hover:text-gold font-medium"
-                    : item.path === "/vente-mandat"
-                    ? "text-harvest-green hover:bg-harvest-green/10 hover:text-harvest-green font-medium"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                }`}>
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body transition-colors ${getLinkClass(item.path, location.pathname === item.path)}`}
+              >
                 <item.icon className="w-4 h-4" /> {item.label}
               </Link>
             ))}
+
             {isAdmin && (
-              <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-accent text-accent-foreground font-semibold hover:opacity-90 transition-colors">
+              <Link to="/admin"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-accent text-accent-foreground font-semibold hover:opacity-90 transition-colors">
                 <Shield className="w-4 h-4" /> Admin
               </Link>
             )}
-            {staffRoles.length > 0 && !isAdmin && (
-              <Link to="/admin" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-primary/10 text-primary font-semibold hover:bg-primary/20 transition-colors">
+            {staffRoles.filter(r => !["moissonneur_pays","moissonneur_ville"].includes(r)).length > 0 && !isAdmin && (
+              <Link to="/admin"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-primary/10 text-primary font-semibold hover:bg-primary/20 transition-colors">
                 <Briefcase className="w-4 h-4" /> Gestion
               </Link>
             )}
             {hasPaysRole && (
-              <Link to="/moissonneur-pays" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-blue-500/10 text-blue-600 font-semibold hover:bg-blue-500/20 transition-colors">
+              <Link to="/moissonneur-pays"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-blue-500/10 text-blue-600 font-semibold hover:bg-blue-500/20 transition-colors">
                 <Globe className="w-4 h-4" /> Mon Pays
               </Link>
             )}
             {hasVilleRole && (
-              <Link to="/moissonneur-ville" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-amber-500/10 text-amber-600 font-semibold hover:bg-amber-500/20 transition-colors">
+              <Link to="/moissonneur-ville"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-amber-500/10 text-amber-600 font-semibold hover:bg-amber-500/20 transition-colors">
                 <MapPin className="w-4 h-4" /> Ma Ville
               </Link>
             )}
@@ -126,33 +146,36 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
       </header>
 
+      {/* ── MENU MOBILE ── */}
       {mobileMenu && (
         <div className="md:hidden border-b border-border bg-card">
           <nav className="p-3 space-y-1">
             {NAV_ITEMS.map(item => (
-              <Link key={item.path} to={item.path} onClick={() => setMobileMenu(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body transition-colors ${
-                  location.pathname === item.path
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : item.path === "/msn-wallet"
-                    ? "text-gold hover:bg-gold/10 font-medium"
-                    : item.path === "/vente-mandat"
-                    ? "text-harvest-green hover:bg-harvest-green/10 font-medium"
-                    : "text-muted-foreground hover:bg-secondary"
-                }`}>
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setMobileMenu(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body transition-colors ${getLinkClass(item.path, location.pathname === item.path)}`}
+              >
                 <item.icon className="w-4 h-4" /> {item.label}
               </Link>
             ))}
+
             {isAdmin && (
               <Link to="/admin" onClick={() => setMobileMenu(false)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-accent text-accent-foreground font-semibold">
                 <Shield className="w-4 h-4" /> Administration
               </Link>
             )}
-            {staffRoles.length > 0 && !isAdmin && (
+            {staffRoles.filter(r => !["moissonneur_pays","moissonneur_ville"].includes(r)).length > 0 && !isAdmin && (
               <Link to="/admin" onClick={() => setMobileMenu(false)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-primary/10 text-primary font-semibold">
-                <Briefcase className="w-4 h-4" /> Gestion ({staffRoles.filter(r => !["moissonneur_pays","moissonneur_ville"].includes(r)).map(r => STAFF_ROLE_LABELS[r] || r).join(", ")})
+                <Briefcase className="w-4 h-4" /> Gestion ({
+                  staffRoles
+                    .filter(r => !["moissonneur_pays","moissonneur_ville"].includes(r))
+                    .map(r => STAFF_ROLE_LABELS[r] || r)
+                    .join(", ")
+                })
               </Link>
             )}
             {hasPaysRole && (
@@ -171,6 +194,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
       )}
 
+      {/* ── CONTENU ── */}
       <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
         {children}
       </main>
