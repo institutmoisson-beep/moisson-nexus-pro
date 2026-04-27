@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Wallet, Users, TrendingUp, Package, Flame, Coins } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import PWAInstallSection from "@/components/PWAInstallSection";
+import { toast } from "sonner";
 
 // ── Stat card mémorisé ──────────────────────────────────
 interface StatCardProps {
@@ -65,43 +66,62 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-
-    // Requêtes parallèles — une seule fois
-    const load = async () => {
-      const [profileRes, networkRes, commRes, ordersRes, coinsRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("user_id", user.id).single(),
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase
-          .from("transactions")
-          .select("amount")
-          .eq("user_id", user.id)
-          .eq("type", "commission")
-          .eq("status", "approved"),
-        supabase
-          .from("pack_orders")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id),
-        supabase
-          .from("msn_coins")
-          .select("coins")
-          .eq("user_id", user.id)
-          .eq("is_converted", false),
-      ]);
-
-      setProfile(profileRes.data);
-      setStats({
-        network: Math.max(0, (networkRes.count ?? 1) - 1),
-        commissions: (commRes.data ?? []).reduce(
-          (s, t) => s + Number(t.amount),
-          0
-        ),
-        orders: ordersRes.count ?? 0,
-        msnCoins: (coinsRes.data ?? []).reduce((s, c) => s + c.coins, 0),
-      });
-    };
-
     load();
+    // Traiter silencieusement les commissions de mandat dues
+    processMandateCommissions();
   }, [user]);
+
+  // ── Traitement automatique des commissions de mandat ──────
+  const processMandateCommissions = async () => {
+    try {
+      const { data, error } = await (supabase as any).rpc("process_mandate_commissions");
+      if (!error && data && data > 0) {
+        toast.success(
+          `🌾 ${data} commission${data > 1 ? "s" : ""} de mandat versée${data > 1 ? "s" : ""} sur votre portefeuille !`,
+          { duration: 5000 }
+        );
+        // Recharger le profil pour afficher le nouveau solde
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user!.id)
+          .single();
+        if (p) setProfile(p);
+      }
+    } catch {
+      // Silencieux — pas critique pour le dashboard
+    }
+  };
+
+  const load = async () => {
+    const [profileRes, networkRes, commRes, ordersRes, coinsRes] = await Promise.all([
+      supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase
+        .from("transactions")
+        .select("amount")
+        .eq("user_id", user!.id)
+        .eq("type", "commission")
+        .eq("status", "approved"),
+      supabase
+        .from("pack_orders")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id),
+      supabase
+        .from("msn_coins")
+        .select("coins")
+        .eq("user_id", user!.id)
+        .eq("is_converted", false),
+    ]);
+
+    setProfile(profileRes.data);
+    setStats({
+      network: Math.max(0, (networkRes.count ?? 1) - 1),
+      commissions: (commRes.data ?? []).reduce((s, t) => s + Number(t.amount), 0),
+      orders: ordersRes.count ?? 0,
+      msnCoins: (coinsRes.data ?? []).reduce((s, c) => s + c.coins, 0),
+    });
+  };
 
   const goTo = useCallback((path: string) => () => navigate(path), [navigate]);
 
@@ -139,16 +159,19 @@ const Dashboard = () => {
           icon={<Wallet className="w-4 h-4 text-primary" />}
           label="Portefeuille"
           value={`${Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA`}
+          onClick={goTo("/portefeuille")}
         />
         <StatCard
           icon={<Users className="w-4 h-4 text-harvest-green" />}
           label="Mon réseau"
           value={String(stats.network)}
+          onClick={goTo("/reseau")}
         />
         <StatCard
           icon={<TrendingUp className="w-4 h-4 text-gold" />}
-          label="Commissions"
+          label="Commissions totales"
           value={`${stats.commissions.toLocaleString("fr-FR")} FCFA`}
+          onClick={goTo("/portefeuille")}
         />
         <StatCard
           icon={<Flame className="w-4 h-4 text-gold" />}
@@ -160,9 +183,45 @@ const Dashboard = () => {
 
       {/* Quick Actions */}
       <div className="grid md:grid-cols-3 gap-4 mb-6">
-        <QuickAction emoji="💰" label="Portefeuille"    desc="Recharger, retirer, historique" onClick={goTo("/portefeuille")} />
-        <QuickAction emoji="📦" label="Acheter un Pack" desc="Activer votre MLM"             onClick={goTo("/packs")} />
-        <QuickAction emoji="🔥" label="MSN Coins"       desc="Convertir, transférer, historique" onClick={goTo("/msn-wallet")} />
+        <QuickAction
+          emoji="💰"
+          label="Portefeuille"
+          desc="Recharger, retirer, historique"
+          onClick={goTo("/portefeuille")}
+        />
+        <QuickAction
+          emoji="📦"
+          label="Acheter un Pack"
+          desc="Activer votre MLM"
+          onClick={goTo("/packs")}
+        />
+        <QuickAction
+          emoji="🏬"
+          label="Vente par Mandat"
+          desc="Commissions automatiques toutes les 72h"
+          onClick={goTo("/vente-mandat")}
+        />
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4 mb-6">
+        <QuickAction
+          emoji="🌾"
+          label="Porteur d'Affaires"
+          desc="Soumettez des commandes terrain"
+          onClick={goTo("/porteur-affaires")}
+        />
+        <QuickAction
+          emoji="🔥"
+          label="MSN Coins"
+          desc="Convertir, transférer, retirer"
+          onClick={goTo("/msn-wallet")}
+        />
+        <QuickAction
+          emoji="👥"
+          label="Mon Réseau"
+          desc="Voir l'arbre de parrainage"
+          onClick={goTo("/reseau")}
+        />
       </div>
 
       {/* PWA Installation — composant dédié */}
