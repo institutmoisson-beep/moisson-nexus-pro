@@ -6,10 +6,68 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logo from "@/assets/logo-moisson.png";
 
-const countries = [
-  "Côte d'Ivoire", "Cameroun", "Sénégal", "Mali", "Burkina Faso", "Guinée", "Togo", "Bénin",
-  "Niger", "Congo (RDC)", "Congo (Brazzaville)", "Gabon", "Tchad", "Madagascar", "France",
-  "Belgique", "Canada", "Suisse", "États-Unis", "Maroc", "Tunisie", "Algérie", "Haïti",
+const COUNTRY_GROUPS = [
+  {
+    label: "🌍 Afrique de l'Ouest",
+    countries: [
+      "Bénin", "Burkina Faso", "Cap-Vert", "Côte d'Ivoire", "Gambie", "Ghana",
+      "Guinée", "Guinée-Bissau", "Liberia", "Mali", "Mauritanie", "Niger",
+      "Nigeria", "Sénégal", "Sierra Leone", "Togo",
+    ],
+  },
+  {
+    label: "🌍 Afrique Centrale",
+    countries: [
+      "Cameroun", "Centrafrique", "Congo (Brazzaville)", "Congo (RDC)",
+      "Gabon", "Guinée équatoriale", "Rwanda", "São Tomé-et-Príncipe", "Tchad",
+    ],
+  },
+  {
+    label: "🌍 Afrique de l'Est",
+    countries: [
+      "Burundi", "Comores", "Djibouti", "Érythrée", "Éthiopie", "Kenya",
+      "Madagascar", "Malawi", "Maurice", "Mozambique", "Ouganda", "Seychelles",
+      "Somalie", "Soudan", "Soudan du Sud", "Tanzanie", "Zambie", "Zimbabwe",
+    ],
+  },
+  {
+    label: "🌍 Afrique du Nord",
+    countries: [
+      "Algérie", "Égypte", "Libye", "Maroc", "Mauritanie", "Tunisie",
+    ],
+  },
+  {
+    label: "🌍 Afrique Australe",
+    countries: [
+      "Afrique du Sud", "Angola", "Botswana", "Eswatini", "Lesotho",
+      "Namibie", "Zimbabwe",
+    ],
+  },
+  {
+    label: "🌍 Îles de l'Océan Indien & Atlantique",
+    countries: [
+      "Cap-Vert", "Comores", "Madagascar", "Maurice", "Mayotte",
+      "Réunion", "Sainte-Hélène", "São Tomé-et-Príncipe", "Seychelles",
+    ],
+  },
+  {
+    label: "🌐 Europe",
+    countries: [
+      "Allemagne", "Autriche", "Belgique", "Bulgarie", "Chypre", "Croatie",
+      "Danemark", "Espagne", "Estonie", "Finlande", "France", "Grèce",
+      "Hongrie", "Irlande", "Islande", "Italie", "Lettonie", "Liechtenstein",
+      "Lituanie", "Luxembourg", "Malte", "Monaco", "Norvège", "Pays-Bas",
+      "Pologne", "Portugal", "République tchèque", "Roumanie", "Slovaquie",
+      "Slovénie", "Suède", "Suisse", "Royaume-Uni",
+    ],
+  },
+  {
+    label: "🌎 Amériques & Caraïbes",
+    countries: [
+      "Canada", "États-Unis", "Haïti", "Guadeloupe", "Guyane française",
+      "Martinique", "Mexique", "Brésil",
+    ],
+  },
 ];
 
 const Register = () => {
@@ -21,6 +79,7 @@ const Register = () => {
     email: "",
     phone: "",
     country: "",
+    city: "",
     referralCode: searchParams.get("ref") || "",
     password: "",
     confirmPassword: "",
@@ -56,7 +115,6 @@ const Register = () => {
       }
       referrerId = referrer.id;
     } else {
-      // Check if any profiles exist - if yes, referral code is required
       const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true });
       if (count && count > 0) {
         toast.error("Le code de parrainage est obligatoire");
@@ -70,6 +128,7 @@ const Register = () => {
       last_name: form.lastName,
       phone: form.phone,
       country: form.country,
+      city: form.city,
     };
     if (referrerId) metadata.referred_by = referrerId;
 
@@ -123,13 +182,24 @@ const Register = () => {
                 className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Pays</label>
-              <select required value={form.country} onChange={(e) => updateField("country", e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all">
-                <option value="">Sélectionner votre pays</option>
-                {countries.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Pays</label>
+                <select required value={form.country} onChange={(e) => updateField("country", e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all">
+                  <option value="">Sélectionner</option>
+                  {COUNTRY_GROUPS.map((group) => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.countries.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5 font-body">Ville</label>
+                <input type="text" placeholder="Ex: Abidjan" value={form.city} onChange={(e) => updateField("city", e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
+              </div>
             </div>
 
             <div>
