@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ShoppingCart, ChevronLeft, ChevronRight, Download, FileText,
   Wallet, Flame, CheckCircle, X,
-  Package, Shield,
+  Package, Shield, RefreshCw, TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -27,6 +27,7 @@ const MandateMarketplace = () => {
   const [msnCoins, setMsnCoins] = useState(0);
   const [coinUsdRate, setCoinUsdRate] = useState(1);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [processingCommissions, setProcessingCommissions] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/connexion");
@@ -36,14 +37,40 @@ const MandateMarketplace = () => {
     if (user) {
       loadData();
       fetchRates();
+      // Traiter les commissions dues à chaque visite
+      processCommissions();
     }
   }, [user]);
+
+  // ── Traitement automatique des commissions dues ──────────────────────────
+  const processCommissions = async () => {
+    if (!user) return;
+    setProcessingCommissions(true);
+    try {
+      const { data, error } = await (supabase as any).rpc("process_mandate_commissions");
+      if (error) {
+        console.error("Erreur traitement commissions mandat:", error);
+      } else if (data && data > 0) {
+        toast.success(`🌾 ${data} commission(s) de mandat versée(s) sur votre portefeuille !`);
+        // Recharger les données pour refléter le nouveau solde
+        await loadData();
+      }
+    } catch (err) {
+      console.error("process_mandate_commissions:", err);
+    } finally {
+      setProcessingCommissions(false);
+    }
+  };
 
   const loadData = async () => {
     const [packsRes, profileRes, subsRes, coinsRes, msnCfgRes] = await Promise.all([
       (supabase as any).from("mandate_packs").select("*").eq("is_active", true).order("created_at", { ascending: false }),
       supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
-      (supabase as any).from("mandate_subscriptions").select("*, mandate_packs(*)").eq("user_id", user!.id).order("created_at", { ascending: false }),
+      (supabase as any)
+        .from("mandate_subscriptions")
+        .select("*, mandate_packs(*)")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false }),
       supabase.from("msn_coins").select("coins").eq("user_id", user!.id).eq("is_converted", false),
       supabase.from("msn_config").select("*"),
     ]);
@@ -81,8 +108,11 @@ const MandateMarketplace = () => {
 
   const deductMSNCoins = async (coinsToUse: number) => {
     let toDeduct = coinsToUse;
-    const { data: userCoins } = await supabase.from("msn_coins")
-      .select("id, coins").eq("user_id", user!.id).eq("is_converted", false)
+    const { data: userCoins } = await supabase
+      .from("msn_coins")
+      .select("id, coins")
+      .eq("user_id", user!.id)
+      .eq("is_converted", false)
       .order("created_at", { ascending: true });
     if (userCoins) {
       for (const c of userCoins) {
@@ -101,13 +131,20 @@ const MandateMarketplace = () => {
   const handlePurchase = async () => {
     if (!selectedPack || !profile) return;
     if (paymentMethod === "wallet" && !canWallet) { toast.error("Solde insuffisant"); return; }
-    if (paymentMethod === "msn" && !canMSN) { toast.error(`Il faut ${coinsNeeded} coins, vous en avez ${msnCoins}`); return; }
+    if (paymentMethod === "msn" && !canMSN) {
+      toast.error(`Il faut ${coinsNeeded} coins, vous en avez ${msnCoins}`);
+      return;
+    }
 
     setSubmitting(true);
     try {
       const price = Number(selectedPack.price_fcfa);
-      const endDate = new Date();
+      const now = new Date();
+      const endDate = new Date(now);
       endDate.setDate(endDate.getDate() + (selectedPack.duration_days || 30));
+
+      const nextCommissionDate = new Date(now);
+      nextCommissionDate.setDate(nextCommissionDate.getDate() + 3);
 
       const { data: subData, error: subErr } = await (supabase as any)
         .from("mandate_subscriptions")
@@ -119,7 +156,7 @@ const MandateMarketplace = () => {
           coins_used: paymentMethod === "msn" ? coinsNeeded : null,
           status: "active",
           end_date: endDate.toISOString(),
-          next_commission_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          next_commission_date: nextCommissionDate.toISOString(),
           total_commissions_paid: 0,
         })
         .select("id")
@@ -127,8 +164,12 @@ const MandateMarketplace = () => {
 
       if (subErr) throw new Error(subErr.message);
 
+      // Déduire le paiement
       if (paymentMethod === "wallet") {
-        await supabase.from("profiles").update({ wallet_balance: Number(profile.wallet_balance) - price }).eq("user_id", user!.id);
+        await supabase
+          .from("profiles")
+          .update({ wallet_balance: Number(profile.wallet_balance) - price })
+          .eq("user_id", user!.id);
         await supabase.from("transactions").insert({
           user_id: user!.id,
           amount: price,
@@ -146,12 +187,16 @@ const MandateMarketplace = () => {
           type: "pack_purchase" as const,
           status: "approved" as const,
           description: `Souscription Mandat de Vente avec ${coinsNeeded} MSN Coins — Pack: ${selectedPack.name}`,
-          metadata: { mandate_pack_id: selectedPack.id, subscription_id: subData?.id, coins_used: coinsNeeded },
+          metadata: {
+            mandate_pack_id: selectedPack.id,
+            subscription_id: subData?.id,
+            coins_used: coinsNeeded,
+          },
           processed_at: new Date().toISOString(),
         });
       }
 
-      const nextPayDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR");
+      const nextPayDate = nextCommissionDate.toLocaleDateString("fr-FR");
       const contractData = {
         transactionId: subData?.id || "TMP",
         purchaseDate: new Date().toISOString(),
@@ -171,7 +216,7 @@ const MandateMarketplace = () => {
       setPurchaseDone({ contractData, subscriptionId: subData?.id });
       await loadData();
       setTimeout(() => generateMandateContractPDF(contractData), 800);
-      toast.success("🌾 Souscription réussie ! Votre contrat PDF est généré.");
+      toast.success("🌾 Souscription réussie ! Votre contrat PDF est généré. La première commission sera versée dans 3 jours.");
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de la souscription");
     } finally {
@@ -189,6 +234,10 @@ const MandateMarketplace = () => {
     return d.toLocaleDateString("fr-FR");
   };
 
+  const isCommissionDue = (sub: any) => {
+    return new Date(sub.next_commission_date) <= new Date();
+  };
+
   const totalExpected = (sub: any) => {
     const pack = sub.mandate_packs;
     if (!pack) return 0;
@@ -198,7 +247,9 @@ const MandateMarketplace = () => {
   if (loading || !profile) {
     return (
       <DashboardLayout>
-        <div className="animate-pulse text-muted-foreground font-body text-center py-12">Chargement...</div>
+        <div className="animate-pulse text-muted-foreground font-body text-center py-12">
+          Chargement...
+        </div>
       </DashboardLayout>
     );
   }
@@ -206,19 +257,39 @@ const MandateMarketplace = () => {
   return (
     <DashboardLayout>
       <div className="mb-6">
-        <h1 className="text-3xl font-heading font-bold text-foreground mb-2">🏬 Vente par Mandat</h1>
-        <p className="text-muted-foreground font-body">
-          Investissez dans un pack, Institut Moisson vend pour vous. Commissions versées automatiquement toutes les 72h.
-        </p>
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-3xl font-heading font-bold text-foreground mb-2">🏬 Vente par Mandat</h1>
+            <p className="text-muted-foreground font-body">
+              Investissez dans un pack, Institut Moisson vend pour vous. Commissions versées automatiquement toutes les 72h.
+            </p>
+          </div>
+          <button
+            onClick={processCommissions}
+            disabled={processingCommissions}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-body font-semibold hover:bg-primary/20 transition-colors disabled:opacity-50"
+            title="Vérifier et verser les commissions dues"
+          >
+            <RefreshCw className={`w-4 h-4 ${processingCommissions ? "animate-spin" : ""}`} />
+            Actualiser les commissions
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-1 bg-secondary p-1 rounded-xl mb-6 w-fit">
         {[
           { key: "marketplace", label: "📦 Marketplace" },
           { key: "my_packs", label: `📋 Mes Mandats (${mySubscriptions.length})` },
-        ].map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-            className={`px-5 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key as any)}
+            className={`px-5 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${
+              activeTab === tab.key
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
             {tab.label}
           </button>
         ))}
@@ -238,10 +309,12 @@ const MandateMarketplace = () => {
                   {[
                     { n: "1", t: "Achetez un pack", d: "Choisissez et financez un stock de marchandises" },
                     { n: "2", t: "Institut Moisson vend", d: "On gère tout : stockage, logistique, distribution" },
-                    { n: "3", t: "Commissions auto", d: "Recevez vos gains dans votre portefeuille tous les 3 jours" },
-                  ].map(s => (
+                    { n: "3", t: "Commissions auto", d: "Versées automatiquement dans votre portefeuille toutes les 72h" },
+                  ].map((s) => (
                     <div key={s.n} className="flex items-start gap-2">
-                      <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{s.n}</span>
+                      <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {s.n}
+                      </span>
                       <div>
                         <p className="text-sm font-semibold text-foreground font-body">{s.t}</p>
                         <p className="text-xs text-muted-foreground font-body">{s.d}</p>
@@ -254,34 +327,53 @@ const MandateMarketplace = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {packs.map(pack => {
-              const totalComm = Math.floor((pack.duration_days || 30) / 3) * Number(pack.commission_every_3_days);
-              const roi = (totalComm / Number(pack.price_fcfa) * 100).toFixed(1);
+            {packs.map((pack) => {
+              const totalComm =
+                Math.floor((pack.duration_days || 30) / 3) * Number(pack.commission_every_3_days);
+              const roi = ((totalComm / Number(pack.price_fcfa)) * 100).toFixed(1);
               return (
-                <div key={pack.id}
+                <div
+                  key={pack.id}
                   onClick={() => { openPack(pack); setShowBuyModal(false); }}
-                  className="card-elevated cursor-pointer hover:shadow-xl hover:border-primary/30 transition-all hover:-translate-y-1 group">
+                  className="card-elevated cursor-pointer hover:shadow-xl hover:border-primary/30 transition-all hover:-translate-y-1 group"
+                >
                   {pack.images?.[0] ? (
                     <div className="relative rounded-xl overflow-hidden aspect-video mb-4 bg-secondary">
-                      <img src={pack.images[0]} alt={pack.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                      <div className="absolute top-2 right-2 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">+{roi}% ROI</div>
+                      <img
+                        src={pack.images[0]}
+                        alt={pack.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-2 right-2 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+                        +{roi}% ROI
+                      </div>
                     </div>
                   ) : (
                     <div className="relative rounded-xl aspect-video mb-4 bg-gradient-to-br from-primary/10 to-gold/10 flex items-center justify-center">
                       <Package className="w-12 h-12 text-primary/40" />
-                      <div className="absolute top-2 right-2 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">+{roi}% ROI</div>
+                      <div className="absolute top-2 right-2 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+                        +{roi}% ROI
+                      </div>
                     </div>
                   )}
                   <h3 className="font-heading font-bold text-foreground text-lg mb-1">{pack.name}</h3>
-                  {pack.description && <p className="text-sm text-muted-foreground font-body line-clamp-2 mb-3">{pack.description}</p>}
+                  {pack.description && (
+                    <p className="text-sm text-muted-foreground font-body line-clamp-2 mb-3">
+                      {pack.description}
+                    </p>
+                  )}
                   <div className="grid grid-cols-3 gap-2 text-center mb-3">
                     <div className="bg-secondary rounded-lg p-2">
                       <p className="text-[10px] text-muted-foreground font-body">Investissement</p>
-                      <p className="text-sm font-bold text-primary">{Number(pack.price_fcfa).toLocaleString("fr-FR")} F</p>
+                      <p className="text-sm font-bold text-primary">
+                        {Number(pack.price_fcfa).toLocaleString("fr-FR")} F
+                      </p>
                     </div>
                     <div className="bg-harvest-green/10 rounded-lg p-2">
                       <p className="text-[10px] text-muted-foreground font-body">Comm/3j</p>
-                      <p className="text-sm font-bold text-harvest-green">{Number(pack.commission_every_3_days).toLocaleString("fr-FR")} F</p>
+                      <p className="text-sm font-bold text-harvest-green">
+                        {Number(pack.commission_every_3_days).toLocaleString("fr-FR")} F
+                      </p>
                     </div>
                     <div className="bg-secondary rounded-lg p-2">
                       <p className="text-[10px] text-muted-foreground font-body">Durée</p>
@@ -290,7 +382,10 @@ const MandateMarketplace = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground font-body">
-                      Total estimé: <span className="text-harvest-green font-bold">{totalComm.toLocaleString("fr-FR")} FCFA</span>
+                      Total estimé:{" "}
+                      <span className="text-harvest-green font-bold">
+                        {totalComm.toLocaleString("fr-FR")} FCFA
+                      </span>
                     </span>
                     <span className="text-sm text-primary font-semibold font-body">Voir →</span>
                   </div>
@@ -310,27 +405,59 @@ const MandateMarketplace = () => {
       {/* ═══ MY PACKS ═══ */}
       {activeTab === "my_packs" && (
         <div className="space-y-4">
-          {mySubscriptions.map(sub => {
+          {mySubscriptions.map((sub) => {
             const pack = sub.mandate_packs;
             if (!pack) return null;
             const daysLeft = getDaysLeft(sub.end_date);
             const isActive = sub.status === "active" && daysLeft > 0;
-            const progressPct = Math.min(100, ((pack.duration_days - daysLeft) / pack.duration_days) * 100);
+            const progressPct = Math.min(
+              100,
+              (((pack.duration_days - daysLeft) / pack.duration_days) * 100)
+            );
+            const commDue = isActive && isCommissionDue(sub);
             return (
               <div key={sub.id} className={`card-elevated ${!isActive ? "opacity-70" : ""}`}>
+                {/* Commission due banner */}
+                {commDue && (
+                  <div className="flex items-center gap-2 mb-3 px-4 py-2.5 rounded-xl bg-gold/10 border border-gold/30 text-sm font-body text-gold">
+                    <TrendingUp className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      Une commission de{" "}
+                      <strong>
+                        {Number(pack.commission_every_3_days).toLocaleString("fr-FR")} FCFA
+                      </strong>{" "}
+                      est en cours de traitement — cliquez sur "Actualiser les commissions" ci-dessus.
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex items-start gap-4 mb-4">
                   {pack.images?.[0] && (
-                    <img src={pack.images[0]} alt={pack.name} className="w-16 h-16 rounded-xl object-cover border border-border flex-shrink-0" />
+                    <img
+                      src={pack.images[0]}
+                      alt={pack.name}
+                      className="w-16 h-16 rounded-xl object-cover border border-border flex-shrink-0"
+                    />
                   )}
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <h3 className="font-heading font-semibold text-foreground">{pack.name}</h3>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isActive ? "bg-harvest-green/20 text-harvest-green" : "bg-muted text-muted-foreground"}`}>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                          isActive
+                            ? "bg-harvest-green/20 text-harvest-green"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
                         {isActive ? `✓ Actif — ${daysLeft}j restants` : "Terminé"}
                       </span>
                     </div>
-                    <p className="text-sm text-primary font-bold">{Number(sub.amount_paid).toLocaleString("fr-FR")} FCFA investis</p>
-                    <p className="text-xs text-muted-foreground font-body">Souscrit le {new Date(sub.created_at).toLocaleDateString("fr-FR")}</p>
+                    <p className="text-sm text-primary font-bold">
+                      {Number(sub.amount_paid).toLocaleString("fr-FR")} FCFA investis
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body">
+                      Souscrit le {new Date(sub.created_at).toLocaleDateString("fr-FR")}
+                    </p>
                   </div>
                 </div>
 
@@ -340,22 +467,35 @@ const MandateMarketplace = () => {
                     <span>{Math.round(progressPct)}%</span>
                   </div>
                   <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-primary to-harvest-green rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                    <div
+                      className="h-full bg-gradient-to-r from-primary to-harvest-green rounded-full transition-all"
+                      style={{ width: `${progressPct}%` }}
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mb-4 text-center">
                   <div className="bg-harvest-green/10 rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground font-body">Commissions reçues</p>
-                    <p className="text-lg font-bold text-harvest-green">{Number(sub.total_commissions_paid || 0).toLocaleString("fr-FR")} F</p>
+                    <p className="text-xs text-muted-foreground font-body">Reçues</p>
+                    <p className="text-lg font-bold text-harvest-green">
+                      {Number(sub.total_commissions_paid || 0).toLocaleString("fr-FR")} F
+                    </p>
                   </div>
                   <div className="bg-secondary rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground font-body">Prochaine commission</p>
-                    <p className="text-sm font-bold text-primary">{getNextCommissionDate(sub)}</p>
+                    <p className="text-xs text-muted-foreground font-body">Prochaine</p>
+                    <p
+                      className={`text-sm font-bold ${
+                        isActive && isCommissionDue(sub) ? "text-gold" : "text-primary"
+                      }`}
+                    >
+                      {isActive && isCommissionDue(sub) ? "Maintenant !" : getNextCommissionDate(sub)}
+                    </p>
                   </div>
                   <div className="bg-gold/10 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground font-body">Total estimé</p>
-                    <p className="text-sm font-bold text-gold">{totalExpected(sub).toLocaleString("fr-FR")} F</p>
+                    <p className="text-sm font-bold text-gold">
+                      {totalExpected(sub).toLocaleString("fr-FR")} F
+                    </p>
                   </div>
                 </div>
 
@@ -389,7 +529,10 @@ const MandateMarketplace = () => {
             <div className="text-center py-16">
               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground font-body">Vous n'avez pas encore de mandat actif.</p>
-              <button onClick={() => setActiveTab("marketplace")} className="mt-4 btn-hero !text-sm !py-2.5 !px-6">
+              <button
+                onClick={() => setActiveTab("marketplace")}
+                className="mt-4 btn-hero !text-sm !py-2.5 !px-6"
+              >
                 Voir les packs disponibles
               </button>
             </div>
@@ -399,32 +542,58 @@ const MandateMarketplace = () => {
 
       {/* ═══ PACK DETAIL MODAL ═══ */}
       {selectedPack && !showBuyModal && (
-        <div className="fixed inset-0 bg-foreground/60 flex items-end md:items-center justify-center z-50 p-0 md:p-4 backdrop-blur-sm"
-          onClick={() => setSelectedPack(null)}>
-          <div className="bg-card w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl border border-border max-h-[90vh] flex flex-col"
-            onClick={e => e.stopPropagation()}>
-
+        <div
+          className="fixed inset-0 bg-foreground/60 flex items-end md:items-center justify-center z-50 p-0 md:p-4 backdrop-blur-sm"
+          onClick={() => setSelectedPack(null)}
+        >
+          <div
+            className="bg-card w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl border border-border max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             {selectedPack.images?.length > 0 && (
               <div className="relative h-52 bg-secondary flex-shrink-0 overflow-hidden">
-                <img src={selectedPack.images[imgIndex]} alt={selectedPack.name} className="w-full h-full object-cover" />
+                <img
+                  src={selectedPack.images[imgIndex]}
+                  alt={selectedPack.name}
+                  className="w-full h-full object-cover"
+                />
                 {selectedPack.images.length > 1 && (
                   <>
-                    <button onClick={() => setImgIndex(i => (i - 1 + selectedPack.images.length) % selectedPack.images.length)}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full">
+                    <button
+                      onClick={() =>
+                        setImgIndex(
+                          (i) => (i - 1 + selectedPack.images.length) % selectedPack.images.length
+                        )
+                      }
+                      className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full"
+                    >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <button onClick={() => setImgIndex(i => (i + 1) % selectedPack.images.length)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full">
+                    <button
+                      onClick={() =>
+                        setImgIndex((i) => (i + 1) % selectedPack.images.length)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full"
+                    >
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </>
                 )}
-                <button onClick={() => setSelectedPack(null)}
-                  className="absolute top-3 right-3 w-9 h-9 bg-black/50 text-white rounded-full flex items-center justify-center">
+                <button
+                  onClick={() => setSelectedPack(null)}
+                  className="absolute top-3 right-3 w-9 h-9 bg-black/50 text-white rounded-full flex items-center justify-center"
+                >
                   <X className="w-4 h-4" />
                 </button>
                 <div className="absolute bottom-3 left-3 bg-harvest-green text-white text-xs px-2.5 py-1 rounded-full font-semibold">
-                  +{(Math.floor((selectedPack.duration_days || 30) / 3) * Number(selectedPack.commission_every_3_days) / Number(selectedPack.price_fcfa) * 100).toFixed(1)}% ROI
+                  +
+                  {(
+                    (Math.floor((selectedPack.duration_days || 30) / 3) *
+                      Number(selectedPack.commission_every_3_days)) /
+                    Number(selectedPack.price_fcfa) *
+                    100
+                  ).toFixed(1)}
+                  % ROI
                 </div>
               </div>
             )}
@@ -432,18 +601,24 @@ const MandateMarketplace = () => {
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div>
                 <h2 className="text-2xl font-heading font-bold text-foreground">{selectedPack.name}</h2>
-                {selectedPack.description && <p className="text-sm text-muted-foreground font-body mt-2">{selectedPack.description}</p>}
+                {selectedPack.description && (
+                  <p className="text-sm text-muted-foreground font-body mt-2">{selectedPack.description}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-center">
                   <p className="text-xs text-muted-foreground font-body mb-1">Investissement</p>
-                  <p className="text-2xl font-heading font-bold text-primary">{Number(selectedPack.price_fcfa).toLocaleString("fr-FR")}</p>
+                  <p className="text-2xl font-heading font-bold text-primary">
+                    {Number(selectedPack.price_fcfa).toLocaleString("fr-FR")}
+                  </p>
                   <p className="text-xs text-muted-foreground font-body">FCFA</p>
                 </div>
                 <div className="bg-harvest-green/5 border border-harvest-green/20 rounded-xl p-4 text-center">
                   <p className="text-xs text-muted-foreground font-body mb-1">Commission / 3 jours</p>
-                  <p className="text-2xl font-heading font-bold text-harvest-green">{Number(selectedPack.commission_every_3_days).toLocaleString("fr-FR")}</p>
+                  <p className="text-2xl font-heading font-bold text-harvest-green">
+                    {Number(selectedPack.commission_every_3_days).toLocaleString("fr-FR")}
+                  </p>
                   <p className="text-xs text-muted-foreground font-body">FCFA automatique</p>
                 </div>
                 <div className="bg-secondary rounded-xl p-4 text-center">
@@ -454,7 +629,10 @@ const MandateMarketplace = () => {
                 <div className="bg-gold/5 border border-gold/20 rounded-xl p-4 text-center">
                   <p className="text-xs text-muted-foreground font-body mb-1">Total estimé</p>
                   <p className="text-2xl font-heading font-bold text-gold">
-                    {(Math.floor((selectedPack.duration_days || 30) / 3) * Number(selectedPack.commission_every_3_days)).toLocaleString("fr-FR")}
+                    {(
+                      Math.floor((selectedPack.duration_days || 30) / 3) *
+                      Number(selectedPack.commission_every_3_days)
+                    ).toLocaleString("fr-FR")}
                   </p>
                   <p className="text-xs text-muted-foreground font-body">FCFA total</p>
                 </div>
@@ -465,10 +643,22 @@ const MandateMarketplace = () => {
                   <Shield className="w-4 h-4 text-primary" /> Ce que vous obtenez
                 </h3>
                 <ul className="space-y-2 text-sm font-body text-muted-foreground">
-                  <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Contrat juridique PDF signé — votre propriété légale</li>
-                  <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Commissions automatiques toutes les 72 heures</li>
-                  <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Suivi en temps réel de vos gains</li>
-                  <li className="flex items-start gap-2"><span className="text-harvest-green font-bold mt-0.5">✓</span> Gestion complète par Institut Moisson</li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-harvest-green font-bold mt-0.5">✓</span>
+                    Contrat juridique PDF signé — votre propriété légale
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-harvest-green font-bold mt-0.5">✓</span>
+                    Commissions versées <strong className="text-foreground">automatiquement</strong> toutes les 72 heures dans votre portefeuille
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-harvest-green font-bold mt-0.5">✓</span>
+                    Suivi en temps réel de vos gains
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-harvest-green font-bold mt-0.5">✓</span>
+                    Gestion complète par Institut Moisson
+                  </li>
                 </ul>
               </div>
             </div>
@@ -495,17 +685,22 @@ const MandateMarketplace = () => {
       {/* ═══ BUY CONFIRMATION MODAL ═══ */}
       {selectedPack && showBuyModal && (
         <div className="fixed inset-0 bg-foreground/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-border"
-            onClick={e => e.stopPropagation()}>
-
+          <div
+            className="bg-card w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
             {purchaseDone ? (
               <div className="p-8 text-center">
                 <div className="w-20 h-20 rounded-full bg-harvest-green/10 flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="w-10 h-10 text-harvest-green" />
                 </div>
                 <h3 className="text-2xl font-heading font-bold text-foreground mb-2">Mandat souscrit ! 🌾</h3>
-                <p className="text-sm text-muted-foreground font-body mb-6">
-                  Votre contrat juridique PDF a été généré automatiquement. Les commissions démarrent dans 3 jours.
+                <p className="text-sm text-muted-foreground font-body mb-2">
+                  Votre contrat juridique PDF a été généré automatiquement.
+                </p>
+                <p className="text-sm text-harvest-green font-body font-semibold mb-6">
+                  ✓ La première commission de{" "}
+                  <strong>{Number(selectedPack.commission_every_3_days).toLocaleString("fr-FR")} FCFA</strong> sera versée automatiquement dans votre portefeuille dans 3 jours.
                 </p>
                 <div className="space-y-3">
                   <button
@@ -515,7 +710,12 @@ const MandateMarketplace = () => {
                     <Download className="w-4 h-4" /> Télécharger le contrat PDF
                   </button>
                   <button
-                    onClick={() => { setShowBuyModal(false); setSelectedPack(null); setPurchaseDone(null); setActiveTab("my_packs"); }}
+                    onClick={() => {
+                      setShowBuyModal(false);
+                      setSelectedPack(null);
+                      setPurchaseDone(null);
+                      setActiveTab("my_packs");
+                    }}
                     className="w-full px-4 py-2.5 rounded-lg border border-input text-muted-foreground font-body text-sm hover:bg-secondary"
                   >
                     Voir mes mandats
@@ -527,15 +727,26 @@ const MandateMarketplace = () => {
                 <div className="p-6 border-b border-border">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-heading font-bold text-foreground">Confirmer la souscription</h3>
-                    <button onClick={() => setShowBuyModal(false)} className="p-1.5 rounded-lg hover:bg-secondary">
+                    <button
+                      onClick={() => setShowBuyModal(false)}
+                      className="p-1.5 rounded-lg hover:bg-secondary"
+                    >
                       <X className="w-4 h-4 text-muted-foreground" />
                     </button>
                   </div>
                   <div className="bg-secondary rounded-xl p-4">
                     <p className="font-heading font-semibold text-foreground">{selectedPack.name}</p>
-                    <p className="text-2xl font-bold text-primary mt-1">{Number(selectedPack.price_fcfa).toLocaleString("fr-FR")} FCFA</p>
+                    <p className="text-2xl font-bold text-primary mt-1">
+                      {Number(selectedPack.price_fcfa).toLocaleString("fr-FR")} FCFA
+                    </p>
                     <p className="text-xs text-harvest-green font-body mt-1">
-                      +{Number(selectedPack.commission_every_3_days).toLocaleString("fr-FR")} FCFA tous les 3 jours pendant {selectedPack.duration_days} jours
+                      +{Number(selectedPack.commission_every_3_days).toLocaleString("fr-FR")} FCFA toutes les 72h ×{" "}
+                      {Math.floor((selectedPack.duration_days || 30) / 3)} versements →{" "}
+                      {(
+                        Math.floor((selectedPack.duration_days || 30) / 3) *
+                        Number(selectedPack.commission_every_3_days)
+                      ).toLocaleString("fr-FR")}{" "}
+                      FCFA total
                     </p>
                   </div>
                 </div>
@@ -544,19 +755,49 @@ const MandateMarketplace = () => {
                   <div>
                     <p className="text-sm font-medium text-foreground mb-2 font-body">Mode de paiement</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => setPaymentMethod("wallet")} disabled={!canWallet}
-                        className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all disabled:opacity-40 ${paymentMethod === "wallet" ? "border-primary bg-primary/10" : "border-border"}`}>
-                        <Wallet className={`w-5 h-5 mb-1 ${paymentMethod === "wallet" ? "text-primary" : "text-muted-foreground"}`} />
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("wallet")}
+                        disabled={!canWallet}
+                        className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all disabled:opacity-40 ${
+                          paymentMethod === "wallet"
+                            ? "border-primary bg-primary/10"
+                            : "border-border"
+                        }`}
+                      >
+                        <Wallet
+                          className={`w-5 h-5 mb-1 ${
+                            paymentMethod === "wallet" ? "text-primary" : "text-muted-foreground"
+                          }`}
+                        />
                         <span className="text-xs font-semibold text-foreground font-body">Portefeuille</span>
-                        <span className="text-[10px] text-muted-foreground">{Number(profile.wallet_balance).toLocaleString("fr-FR")} F</span>
-                        {!canWallet && <span className="text-[10px] text-destructive">Insuffisant</span>}
+                        <span className="text-[10px] text-muted-foreground">
+                          {Number(profile.wallet_balance).toLocaleString("fr-FR")} F
+                        </span>
+                        {!canWallet && (
+                          <span className="text-[10px] text-destructive">Insuffisant</span>
+                        )}
                       </button>
-                      <button type="button" onClick={() => setPaymentMethod("msn")} disabled={!canMSN}
-                        className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all disabled:opacity-40 ${paymentMethod === "msn" ? "border-gold bg-gold/10" : "border-border"}`}>
-                        <Flame className={`w-5 h-5 mb-1 ${paymentMethod === "msn" ? "text-gold" : "text-muted-foreground"}`} />
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("msn")}
+                        disabled={!canMSN}
+                        className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all disabled:opacity-40 ${
+                          paymentMethod === "msn" ? "border-gold bg-gold/10" : "border-border"
+                        }`}
+                      >
+                        <Flame
+                          className={`w-5 h-5 mb-1 ${
+                            paymentMethod === "msn" ? "text-gold" : "text-muted-foreground"
+                          }`}
+                        />
                         <span className="text-xs font-semibold text-foreground font-body">MSN Coins</span>
-                        <span className="text-[10px] text-muted-foreground">{coinsNeeded} requis / {msnCoins} dispo</span>
-                        {!canMSN && <span className="text-[10px] text-destructive">Insuffisant</span>}
+                        <span className="text-[10px] text-muted-foreground">
+                          {coinsNeeded} requis / {msnCoins} dispo
+                        </span>
+                        {!canMSN && (
+                          <span className="text-[10px] text-destructive">Insuffisant</span>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -564,13 +805,19 @@ const MandateMarketplace = () => {
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
                     <FileText className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                     <p className="text-xs font-body text-blue-700">
-                      Un <strong>contrat juridique PDF</strong> sera généré automatiquement et disponible immédiatement.
+                      Un <strong>contrat juridique PDF</strong> sera généré automatiquement. Les commissions sont versées{" "}
+                      <strong>toutes les 72h directement dans votre portefeuille</strong>, sans action de votre part.
                     </p>
                   </div>
 
                   <button
                     onClick={handlePurchase}
-                    disabled={submitting || (!canWallet && !canMSN) || (paymentMethod === "wallet" && !canWallet) || (paymentMethod === "msn" && !canMSN)}
+                    disabled={
+                      submitting ||
+                      (!canWallet && !canMSN) ||
+                      (paymentMethod === "wallet" && !canWallet) ||
+                      (paymentMethod === "msn" && !canMSN)
+                    }
                     className="w-full btn-gold !text-sm !py-3 disabled:opacity-50"
                   >
                     {submitting ? (
@@ -578,7 +825,9 @@ const MandateMarketplace = () => {
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         Traitement...
                       </span>
-                    ) : "✅ Confirmer & générer le contrat"}
+                    ) : (
+                      "✅ Confirmer & générer le contrat"
+                    )}
                   </button>
                 </div>
               </>
