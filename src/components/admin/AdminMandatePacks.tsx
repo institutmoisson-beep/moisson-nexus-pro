@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, Edit, Package, CheckCircle, Clock, TrendingUp } from "lucide-react";
+import {
+  Plus, Trash2, Edit, Package, CheckCircle, Clock, TrendingUp, RefreshCw,
+} from "lucide-react";
 import ImageUploader from "./ImageUploader";
 
 const AdminMandatePacks = () => {
@@ -11,6 +13,8 @@ const AdminMandatePacks = () => {
   const [showForm, setShowForm] = useState(false);
   const [editPack, setEditPack] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"packs" | "subscriptions">("packs");
+  const [processing, setProcessing] = useState(false);
+  const [processedCount, setProcessedCount] = useState<number | null>(null);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -21,9 +25,7 @@ const AdminMandatePacks = () => {
   const [packImages, setPackImages] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     const [packsRes, subsRes, profilesRes] = await Promise.all([
@@ -45,14 +47,33 @@ const AdminMandatePacks = () => {
     return p ? `${p.first_name} ${p.last_name}` : userId.slice(0, 8) + "...";
   };
 
+  // ── Traitement manuel des commissions ─────────────────────
+  const handleProcessCommissions = async () => {
+    setProcessing(true);
+    setProcessedCount(null);
+    try {
+      const { data, error } = await (supabase as any).rpc("process_mandate_commissions");
+      if (error) {
+        toast.error("Erreur: " + error.message);
+      } else {
+        const count = data ?? 0;
+        setProcessedCount(count);
+        if (count > 0) {
+          toast.success(`✅ ${count} commission(s) versée(s) avec succès !`);
+        } else {
+          toast.info("Aucune commission due pour le moment.");
+        }
+        await loadData();
+      }
+    } catch (err: any) {
+      toast.error("Erreur inattendue: " + err.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const resetForm = () => {
-    setForm({
-      name: "",
-      description: "",
-      price_fcfa: "",
-      commission_every_3_days: "",
-      duration_days: "30",
-    });
+    setForm({ name: "", description: "", price_fcfa: "", commission_every_3_days: "", duration_days: "30" });
     setPackImages([]);
     setEditPack(null);
     setShowForm(false);
@@ -93,22 +114,14 @@ const AdminMandatePacks = () => {
       : await (supabase as any).from("mandate_packs").insert(payload);
 
     setSaving(false);
-
-    if (error) {
-      toast.error("Erreur: " + error.message);
-      return;
-    }
-
+    if (error) { toast.error("Erreur: " + error.message); return; }
     toast.success(editPack ? "Pack modifié !" : "Pack créé !");
     resetForm();
     loadData();
   };
 
   const toggleActive = async (pack: any) => {
-    await (supabase as any)
-      .from("mandate_packs")
-      .update({ is_active: !pack.is_active })
-      .eq("id", pack.id);
+    await (supabase as any).from("mandate_packs").update({ is_active: !pack.is_active }).eq("id", pack.id);
     toast.success(pack.is_active ? "Pack désactivé" : "Pack activé");
     loadData();
   };
@@ -121,9 +134,7 @@ const AdminMandatePacks = () => {
   };
 
   const getDaysLeft = (endDate: string) => {
-    const days = Math.ceil(
-      (new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-    );
+    const days = Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     return Math.max(0, days);
   };
 
@@ -131,32 +142,61 @@ const AdminMandatePacks = () => {
   const activeSubs = subscriptions.filter(
     (s) => s.status === "active" && getDaysLeft(s.end_date) > 0
   );
-  const totalInvested = subscriptions.reduce(
-    (sum, s) => sum + Number(s.amount_paid || 0),
-    0
+  const pendingCommissions = subscriptions.filter(
+    (s) => s.status === "active" && new Date(s.next_commission_date) <= new Date()
   );
-  const totalCommPaid = subscriptions.reduce(
-    (sum, s) => sum + Number(s.total_commissions_paid || 0),
-    0
-  );
+  const totalInvested = subscriptions.reduce((sum, s) => sum + Number(s.amount_paid || 0), 0);
+  const totalCommPaid = subscriptions.reduce((sum, s) => sum + Number(s.total_commissions_paid || 0), 0);
 
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-heading font-bold text-foreground">
-          🏬 Vente par Mandat
-        </h1>
-        <button
-          onClick={() => {
-            resetForm();
-            setShowForm(true);
-          }}
-          className="btn-gold !text-sm !py-2 flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> Nouveau Pack
-        </button>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h1 className="text-2xl font-heading font-bold text-foreground">🏬 Vente par Mandat</h1>
+        <div className="flex items-center gap-2">
+          {/* Bouton de traitement des commissions */}
+          <button
+            onClick={handleProcessCommissions}
+            disabled={processing}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-body font-semibold transition-colors disabled:opacity-50 ${
+              pendingCommissions.length > 0
+                ? "bg-gold/20 text-gold border border-gold/30 hover:bg-gold/30"
+                : "bg-secondary text-muted-foreground hover:bg-muted"
+            }`}
+            title="Verser toutes les commissions dues aux membres"
+          >
+            <RefreshCw className={`w-4 h-4 ${processing ? "animate-spin" : ""}`} />
+            {processing
+              ? "Traitement..."
+              : pendingCommissions.length > 0
+              ? `⏰ Verser ${pendingCommissions.length} commission(s) dues`
+              : "Vérifier les commissions"}
+          </button>
+
+          <button
+            onClick={() => { resetForm(); setShowForm(true); }}
+            className="btn-gold !text-sm !py-2 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Nouveau Pack
+          </button>
+        </div>
       </div>
+
+      {/* Résultat du traitement */}
+      {processedCount !== null && (
+        <div className={`mb-4 flex items-center gap-3 p-4 rounded-xl border ${
+          processedCount > 0
+            ? "bg-harvest-green/10 border-harvest-green/30 text-harvest-green"
+            : "bg-secondary border-border text-muted-foreground"
+        }`}>
+          <CheckCircle className="w-5 h-5 flex-shrink-0" />
+          <p className="text-sm font-body font-semibold">
+            {processedCount > 0
+              ? `${processedCount} commission(s) versée(s) automatiquement dans les portefeuilles des membres.`
+              : "Aucune commission n'était due. Tout est à jour."}
+          </p>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -181,6 +221,21 @@ const AdminMandatePacks = () => {
           <p className="text-xs text-muted-foreground font-body">FCFA commissions versées</p>
         </div>
       </div>
+
+      {/* Alerte commissions en retard */}
+      {pendingCommissions.length > 0 && (
+        <div className="mb-6 flex items-center gap-3 p-4 rounded-xl bg-gold/10 border border-gold/30">
+          <Clock className="w-5 h-5 text-gold flex-shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-foreground font-body">
+              {pendingCommissions.length} commission(s) en attente de versement
+            </p>
+            <p className="text-xs text-muted-foreground font-body">
+              Cliquez sur "Verser les commissions dues" pour créditer automatiquement les portefeuilles.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 bg-secondary p-1 rounded-xl mb-6 w-fit">
@@ -243,9 +298,7 @@ const AdminMandatePacks = () => {
                 type="number"
                 placeholder="Ex: 5000"
                 value={form.commission_every_3_days}
-                onChange={(e) =>
-                  setForm({ ...form, commission_every_3_days: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, commission_every_3_days: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm"
               />
             </div>
@@ -268,15 +321,13 @@ const AdminMandatePacks = () => {
                   <p className="text-sm font-bold text-harvest-green">
                     +
                     {(
-                      ((Math.floor(Number(form.duration_days) / 3) *
-                        Number(form.commission_every_3_days)) /
+                      ((Math.floor(Number(form.duration_days) / 3) * Number(form.commission_every_3_days)) /
                         Number(form.price_fcfa)) *
                       100
                     ).toFixed(1)}
                     % (
                     {(
-                      Math.floor(Number(form.duration_days) / 3) *
-                      Number(form.commission_every_3_days)
+                      Math.floor(Number(form.duration_days) / 3) * Number(form.commission_every_3_days)
                     ).toLocaleString("fr-FR")}{" "}
                     FCFA total)
                   </p>
@@ -316,36 +367,24 @@ const AdminMandatePacks = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {packs.map((pack) => {
             const totalComm =
-              Math.floor((pack.duration_days || 30) / 3) *
-              Number(pack.commission_every_3_days);
-            const roi = (
-              (totalComm / Number(pack.price_fcfa)) *
-              100
-            ).toFixed(1);
-            const subCount = subscriptions.filter(
-              (s) => s.mandate_pack_id === pack.id
+              Math.floor((pack.duration_days || 30) / 3) * Number(pack.commission_every_3_days);
+            const roi = ((totalComm / Number(pack.price_fcfa)) * 100).toFixed(1);
+            const subCount = subscriptions.filter((s) => s.mandate_pack_id === pack.id).length;
+            const activeSubCount = subscriptions.filter(
+              (s) => s.mandate_pack_id === pack.id && s.status === "active"
             ).length;
 
             return (
-              <div
-                key={pack.id}
-                className={`card-elevated ${!pack.is_active ? "opacity-60" : ""}`}
-              >
+              <div key={pack.id} className={`card-elevated ${!pack.is_active ? "opacity-60" : ""}`}>
                 {pack.images?.[0] && (
                   <div className="rounded-xl overflow-hidden aspect-video mb-3 bg-secondary">
-                    <img
-                      src={pack.images[0]}
-                      alt={pack.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={pack.images[0]} alt={pack.name} className="w-full h-full object-cover" />
                   </div>
                 )}
 
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="font-heading font-semibold text-foreground">
-                      {pack.name}
-                    </h3>
+                    <h3 className="font-heading font-semibold text-foreground">{pack.name}</h3>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                         pack.is_active
@@ -357,18 +396,10 @@ const AdminMandatePacks = () => {
                     </span>
                   </div>
                   <div className="flex gap-1">
-                    <button
-                      onClick={() => startEdit(pack)}
-                      className="p-1.5 rounded-md hover:bg-secondary"
-                      title="Modifier"
-                    >
+                    <button onClick={() => startEdit(pack)} className="p-1.5 rounded-md hover:bg-secondary" title="Modifier">
                       <Edit className="w-4 h-4 text-primary" />
                     </button>
-                    <button
-                      onClick={() => handleDelete(pack.id)}
-                      className="p-1.5 rounded-md hover:bg-secondary"
-                      title="Supprimer"
-                    >
+                    <button onClick={() => handleDelete(pack.id)} className="p-1.5 rounded-md hover:bg-secondary" title="Supprimer">
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </button>
                   </div>
@@ -395,25 +426,22 @@ const AdminMandatePacks = () => {
                   </div>
                   <div className="bg-secondary rounded-lg p-2">
                     <p className="text-[10px] text-muted-foreground font-body">Durée</p>
-                    <p className="text-xs font-bold text-foreground">
-                      {pack.duration_days}j
-                    </p>
+                    <p className="text-xs font-bold text-foreground">{pack.duration_days}j</p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs font-body">
+                <div className="flex items-center justify-between text-xs font-body mb-3">
                   <span className="text-muted-foreground">
-                    ROI:{" "}
-                    <span className="text-harvest-green font-bold">+{roi}%</span>
+                    ROI: <span className="text-harvest-green font-bold">+{roi}%</span>
                   </span>
                   <span className="text-muted-foreground">
-                    {subCount} souscription{subCount !== 1 ? "s" : ""}
+                    {activeSubCount} actif / {subCount} total
                   </span>
                 </div>
 
                 <button
                   onClick={() => toggleActive(pack)}
-                  className={`w-full mt-3 py-1.5 rounded-lg text-xs font-body font-semibold transition-colors ${
+                  className={`w-full py-1.5 rounded-lg text-xs font-body font-semibold transition-colors ${
                     pack.is_active
                       ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
                       : "bg-harvest-green/10 text-harvest-green hover:bg-harvest-green/20"
@@ -427,14 +455,9 @@ const AdminMandatePacks = () => {
           {packs.length === 0 && (
             <div className="col-span-3 text-center py-12">
               <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground font-body">
-                Aucun pack mandat créé
-              </p>
+              <p className="text-muted-foreground font-body">Aucun pack mandat créé</p>
               <button
-                onClick={() => {
-                  resetForm();
-                  setShowForm(true);
-                }}
+                onClick={() => { resetForm(); setShowForm(true); }}
                 className="mt-3 btn-gold !text-sm !py-2 !px-4"
               >
                 Créer le premier pack
@@ -454,8 +477,8 @@ const AdminMandatePacks = () => {
                 <th className="text-left py-2 px-3">Membre</th>
                 <th className="text-left py-2 px-3">Pack</th>
                 <th className="text-right py-2 px-3">Investi</th>
-                <th className="text-right py-2 px-3">Commissions</th>
-                <th className="text-left py-2 px-3">Paiement</th>
+                <th className="text-right py-2 px-3">Reçues</th>
+                <th className="text-left py-2 px-3">Prochaine comm.</th>
                 <th className="text-center py-2 px-3">Statut</th>
                 <th className="text-center py-2 px-3">Jours restants</th>
               </tr>
@@ -464,30 +487,30 @@ const AdminMandatePacks = () => {
               {subscriptions.map((sub: any) => {
                 const daysLeft = getDaysLeft(sub.end_date);
                 const isActive = sub.status === "active" && daysLeft > 0;
+                const commDue = isActive && new Date(sub.next_commission_date) <= new Date();
                 return (
-                  <tr
-                    key={sub.id}
-                    className="border-b border-border/50 hover:bg-secondary/20"
-                  >
+                  <tr key={sub.id} className={`border-b border-border/50 hover:bg-secondary/20 ${commDue ? "bg-gold/5" : ""}`}>
                     <td className="py-2 px-3 text-xs whitespace-nowrap">
                       {new Date(sub.created_at).toLocaleDateString("fr-FR")}
                     </td>
                     <td className="py-2 px-3 font-medium whitespace-nowrap">
                       {getUserName(sub.user_id)}
                     </td>
-                    <td className="py-2 px-3 text-xs">
-                      {sub.mandate_packs?.name || "—"}
-                    </td>
+                    <td className="py-2 px-3 text-xs">{sub.mandate_packs?.name || "—"}</td>
                     <td className="py-2 px-3 text-right font-semibold text-primary whitespace-nowrap">
                       {Number(sub.amount_paid).toLocaleString("fr-FR")} F
                     </td>
                     <td className="py-2 px-3 text-right font-semibold text-harvest-green whitespace-nowrap">
                       {Number(sub.total_commissions_paid || 0).toLocaleString("fr-FR")} F
                     </td>
-                    <td className="py-2 px-3 text-xs text-muted-foreground">
-                      {sub.payment_method === "msn"
-                        ? `🔥 ${sub.coins_used} coins`
-                        : "💰 Portefeuille"}
+                    <td className="py-2 px-3 text-xs whitespace-nowrap">
+                      {isActive ? (
+                        <span className={commDue ? "font-bold text-gold" : "text-muted-foreground"}>
+                          {commDue ? "⏰ Due maintenant" : new Date(sub.next_commission_date).toLocaleDateString("fr-FR")}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="py-2 px-3 text-center">
                       <span
@@ -502,9 +525,7 @@ const AdminMandatePacks = () => {
                     </td>
                     <td className="py-2 px-3 text-center">
                       {isActive ? (
-                        <span className="text-xs font-bold text-primary">
-                          {daysLeft}j
-                        </span>
+                        <span className="text-xs font-bold text-primary">{daysLeft}j</span>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
@@ -514,10 +535,7 @@ const AdminMandatePacks = () => {
               })}
               {subscriptions.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="py-12 text-center text-muted-foreground font-body"
-                  >
+                  <td colSpan={8} className="py-12 text-center text-muted-foreground font-body">
                     Aucune souscription enregistrée
                   </td>
                 </tr>
