@@ -1,11 +1,7 @@
 /**
- * usePWA — Hook centralisé pour la gestion de l'installation PWA
- *
- * Stratégie :
- * - Capture beforeinstallprompt AVANT le montage du composant (écoute globale au plus tôt)
- * - Persiste l'événement dans un module-level variable pour ne pas le perdre entre rendus
- * - Gère iOS séparément (Safari ne supporte pas beforeinstallprompt)
- * - Respecte le choix de l'utilisateur (ne re-propose pas avant 7 jours)
+ * usePWA — Hook PWA persistant
+ * La bannière reste visible TANT QUE l'app n'est pas installée.
+ * Aucun cooldown, aucune suppression automatique.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -15,7 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-// ── Module-level : capture dès que le script charge, avant tout React ──
+// Capture globale dès le chargement du script
 let _deferredPrompt: BeforeInstallPromptEvent | null = null;
 let _promptListeners: Array<(e: BeforeInstallPromptEvent) => void> = [];
 
@@ -27,10 +23,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-// ── Constantes ──
-const DISMISSED_KEY = "pwa-dismissed-at";
 const INSTALLED_KEY = "pwa-installed";
-const DISMISS_COOLDOWN_DAYS = 7;
 
 function isAlreadyInstalled(): boolean {
   if (typeof window === "undefined") return false;
@@ -41,57 +34,38 @@ function isAlreadyInstalled(): boolean {
   );
 }
 
-function wasDismissedRecently(): boolean {
-  const raw = localStorage.getItem(DISMISSED_KEY);
-  if (!raw) return false;
-  const daysSince = (Date.now() - new Date(raw).getTime()) / 86_400_000;
-  return daysSince < DISMISS_COOLDOWN_DAYS;
-}
-
 export function usePWA() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(_deferredPrompt);
-  const [showBanner, setShowBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  // La bannière est TOUJOURS visible si non installé
+  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    // Déjà installé ?
     if (isAlreadyInstalled()) {
       setIsInstalled(true);
+      setShowBanner(false);
       return;
     }
 
-    // iOS detection
     const ua = navigator.userAgent;
     const ios = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     setIsIOS(ios);
 
-    // Déjà refusé récemment ?
-    if (wasDismissedRecently()) return;
+    // Afficher immédiatement (pas de délai)
+    setShowBanner(true);
 
-    // Si l'event était déjà capturé avant le montage
     if (_deferredPrompt) {
       setDeferredPrompt(_deferredPrompt);
-      // Délai 4s pour ne pas agresser l'utilisateur dès l'arrivée
-      const t = setTimeout(() => setShowBanner(true), 4000);
-      return () => clearTimeout(t);
     }
 
-    if (ios) {
-      const t = setTimeout(() => setShowBanner(true), 4000);
-      return () => clearTimeout(t);
-    }
-
-    // Abonnement pour recevoir l'event si pas encore déclenché
     const listener = (e: BeforeInstallPromptEvent) => {
       setDeferredPrompt(e);
-      const t = setTimeout(() => setShowBanner(true), 4000);
-      // Pas de cleanup ici car le listener est global
+      setShowBanner(true);
     };
     _promptListeners.push(listener);
 
-    // Appinstalled
     const onInstalled = () => {
       setIsInstalled(true);
       setShowBanner(false);
@@ -99,9 +73,19 @@ export function usePWA() {
     };
     window.addEventListener("appinstalled", onInstalled);
 
+    // Vérification périodique du mode standalone (utile sur iOS)
+    const checkInstalled = setInterval(() => {
+      if (isAlreadyInstalled()) {
+        setIsInstalled(true);
+        setShowBanner(false);
+        clearInterval(checkInstalled);
+      }
+    }, 2000);
+
     return () => {
       _promptListeners = _promptListeners.filter((fn) => fn !== listener);
       window.removeEventListener("appinstalled", onInstalled);
+      clearInterval(checkInstalled);
     };
   }, []);
 
@@ -120,17 +104,24 @@ export function usePWA() {
     } catch {
       // silencieux
     }
-    dismiss();
     return false;
   }, [deferredPrompt]);
 
+  // dismiss() ne fait RIEN — la bannière reste visible
   const dismiss = useCallback(() => {
-    setShowBanner(false);
-    localStorage.setItem(DISMISSED_KEY, new Date().toISOString());
+    // Intentionnellement vide : on ne cache pas la bannière
   }, []);
 
-  const canInstall =
-    !isInstalled && !wasDismissedRecently() && (!!deferredPrompt || isIOS);
+  const canInstall = !isInstalled && (!!deferredPrompt || isIOS);
 
-  return { showBanner, isInstalled, isIOS, deferredPrompt, canInstall, install, dismiss, setShowBanner };
+  return {
+    showBanner,
+    isInstalled,
+    isIOS,
+    deferredPrompt,
+    canInstall,
+    install,
+    dismiss,
+    setShowBanner,
+  };
 }
