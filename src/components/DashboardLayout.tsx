@@ -195,7 +195,8 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       )}
 
       {/* ── CONTENU ── */}
-      <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+      {/* pb-24 : marge basse pour que la bannière PWA fixe ne cache pas le contenu */}
+      <main className="container mx-auto px-4 md:px-6 py-6 md:py-8 pb-24">
         {children}
       </main>
 
