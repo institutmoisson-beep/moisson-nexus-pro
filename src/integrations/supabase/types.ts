@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_orders: {
+        Row: {
+          bonus_amount: number
+          bonus_paid: boolean
+          bonus_percent: number
+          completed_at: string | null
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          id: string
+          notes: string | null
+          pack_id: string | null
+          processed_by: string | null
+          product_description: string
+          quantity: number
+          status: string
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bonus_amount?: number
+          bonus_paid?: boolean
+          bonus_percent?: number
+          completed_at?: string | null
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          delivery_address: string
+          id?: string
+          notes?: string | null
+          pack_id?: string | null
+          processed_by?: string | null
+          product_description: string
+          quantity?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bonus_amount?: number
+          bonus_paid?: boolean
+          bonus_percent?: number
+          completed_at?: string | null
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          delivery_address?: string
+          id?: string
+          notes?: string | null
+          pack_id?: string | null
+          processed_by?: string | null
+          product_description?: string
+          quantity?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_orders_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       career_bonuses: {
         Row: {
           bonus_amount: number
@@ -64,6 +135,110 @@ export type Database = {
           percentage?: number
         }
         Relationships: []
+      }
+      mandate_packs: {
+        Row: {
+          commission_every_3_days: number
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          images: string[] | null
+          is_active: boolean
+          name: string
+          price_fcfa: number
+          price_msn_coins: number | null
+          stock_available: number | null
+          updated_at: string
+        }
+        Insert: {
+          commission_every_3_days?: number
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          images?: string[] | null
+          is_active?: boolean
+          name: string
+          price_fcfa?: number
+          price_msn_coins?: number | null
+          stock_available?: number | null
+          updated_at?: string
+        }
+        Update: {
+          commission_every_3_days?: number
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          images?: string[] | null
+          is_active?: boolean
+          name?: string
+          price_fcfa?: number
+          price_msn_coins?: number | null
+          stock_available?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mandate_subscriptions: {
+        Row: {
+          amount_paid: number
+          coins_used: number | null
+          created_at: string
+          end_date: string
+          id: string
+          last_commission_date: string | null
+          last_commission_paid_at: string | null
+          mandate_pack_id: string
+          next_commission_date: string | null
+          payment_method: string
+          status: string
+          total_commissions_paid: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid?: number
+          coins_used?: number | null
+          created_at?: string
+          end_date: string
+          id?: string
+          last_commission_date?: string | null
+          last_commission_paid_at?: string | null
+          mandate_pack_id: string
+          next_commission_date?: string | null
+          payment_method?: string
+          status?: string
+          total_commissions_paid?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          coins_used?: number | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          last_commission_date?: string | null
+          last_commission_paid_at?: string | null
+          mandate_pack_id?: string
+          next_commission_date?: string | null
+          payment_method?: string
+          status?: string
+          total_commissions_paid?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_subscriptions_mandate_pack_id_fkey"
+            columns: ["mandate_pack_id"]
+            isOneToOne: false
+            referencedRelation: "mandate_packs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mlm_config: {
         Row: {
@@ -167,6 +342,57 @@ export type Database = {
           id?: string
           status?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      msn_withdrawals: {
+        Row: {
+          admin_note: string | null
+          coins_amount: number
+          created_at: string
+          currency_amount: number
+          currency_code: string
+          id: string
+          payment_contact: string
+          payment_service: string
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          usd_rate: number
+          user_id: string
+          xof_rate: number
+        }
+        Insert: {
+          admin_note?: string | null
+          coins_amount: number
+          created_at?: string
+          currency_amount?: number
+          currency_code?: string
+          id?: string
+          payment_contact: string
+          payment_service: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          usd_rate?: number
+          user_id: string
+          xof_rate?: number
+        }
+        Update: {
+          admin_note?: string | null
+          coins_amount?: number
+          created_at?: string
+          currency_amount?: number
+          currency_code?: string
+          id?: string
+          payment_contact?: string
+          payment_service?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          usd_rate?: number
+          user_id?: string
+          xof_rate?: number
         }
         Relationships: []
       }
@@ -556,20 +782,68 @@ export type Database = {
           },
         ]
       }
+      regional_moderation_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          moderator_id: string
+          moderator_role: string
+          moderator_user_id: string
+          motif: string | null
+          reason: string | null
+          scope: string
+          scope_value: string
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          moderator_id: string
+          moderator_role: string
+          moderator_user_id: string
+          motif?: string | null
+          reason?: string | null
+          scope?: string
+          scope_value: string
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          moderator_id?: string
+          moderator_role?: string
+          moderator_user_id?: string
+          motif?: string | null
+          reason?: string | null
+          scope?: string
+          scope_value?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       staff_roles: {
         Row: {
+          assigned_city: string | null
+          assigned_country: string | null
           created_at: string
           id: string
           role: string
           user_id: string
         }
         Insert: {
+          assigned_city?: string | null
+          assigned_country?: string | null
           created_at?: string
           id?: string
           role: string
           user_id: string
         }
         Update: {
+          assigned_city?: string | null
+          assigned_country?: string | null
           created_at?: string
           id?: string
           role?: string
@@ -653,7 +927,31 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      business_agent_leaderboard: {
+        Row: {
+          agent_name: string | null
+          career_level: Database["public"]["Enums"]["career_profile"] | null
+          completed_orders: number | null
+          total_bonus_earned: number | null
+          total_orders: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      regional_staff_view: {
+        Row: {
+          assigned_city: string | null
+          assigned_country: string | null
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          role: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       award_msn_coins: {
@@ -687,6 +985,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      process_mandate_commissions: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "admin" | "user"
