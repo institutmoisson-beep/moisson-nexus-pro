@@ -26,12 +26,13 @@ import AdminMSNWithdrawals    from "@/components/admin/AdminMSNWithdrawals";
 import AdminMandatePacks      from "@/components/admin/AdminMandatePacks";
 import AdminRegionalRoles     from "@/components/admin/AdminRegionalRoles";
 import AdminPorteurAffaires   from "@/components/admin/AdminPorteurAffaires";
+import AdminUrgentCases       from "@/components/admin/AdminUrgentCases";
 
 type AdminTab =
   | "overview" | "users" | "packs" | "sectors" | "partners"
   | "transactions" | "payments" | "commissions" | "bonuses"
   | "pro_directory" | "orders" | "fees" | "msn_plan" | "msn_withdrawals"
-  | "mandate_packs" | "regional_roles" | "porteur_affaires";
+  | "mandate_packs" | "regional_roles" | "porteur_affaires" | "urgent_cases";
 
 const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
   financier:     ["overview", "transactions", "payments", "commissions", "bonuses", "fees", "msn_withdrawals"],
@@ -40,14 +41,15 @@ const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
   informaticien: [
     "overview", "users", "packs", "sectors", "partners", "transactions", "payments",
     "commissions", "bonuses", "pro_directory", "orders", "fees", "msn_plan",
-    "msn_withdrawals", "mandate_packs", "regional_roles", "porteur_affaires",
+    "msn_withdrawals", "mandate_packs", "regional_roles", "porteur_affaires", "urgent_cases",
   ],
-  commercial:    ["overview", "users", "pro_directory", "orders", "mandate_packs", "porteur_affaires"],
-  communication: ["overview", "partners", "pro_directory"],
+  commercial:    ["overview", "users", "pro_directory", "orders", "mandate_packs", "porteur_affaires", "urgent_cases"],
+  communication: ["overview", "partners", "pro_directory", "urgent_cases"],
 };
 
 const ALL_TABS: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
   { key: "overview",          label: "Vue d'ensemble",          icon: <TrendingUp className="w-4 h-4" /> },
+  { key: "urgent_cases",      label: "🚨 Cas Urgents",          icon: <TrendingUp className="w-4 h-4" /> },
   { key: "users",             label: "Utilisateurs",            icon: <Users className="w-4 h-4" /> },
   { key: "pro_directory",     label: "Moissonneurs Pros",       icon: <UserCheck className="w-4 h-4" /> },
   { key: "packs",             label: "Packs",                   icon: <Package className="w-4 h-4" /> },
@@ -220,6 +222,7 @@ const AdminDashboard = () => {
           {activeTab === "mandate_packs"    && <AdminMandatePacks />}
           {activeTab === "regional_roles"   && <AdminRegionalRoles />}
           {activeTab === "porteur_affaires" && <AdminPorteurAffaires />}
+          {activeTab === "urgent_cases"     && <AdminUrgentCases />}
         </main>
       </div>
     </div>
