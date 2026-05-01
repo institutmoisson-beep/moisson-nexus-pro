@@ -133,6 +133,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 <MapPin className="w-4 h-4" /> Ma Ville
               </Link>
             )}
+            {(hasPaysRole || hasVilleRole) && (
+              <Link to="/cas-urgents-zone"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-red-500/10 text-red-600 font-semibold hover:bg-red-500/20 transition-colors">
+                🚨 Urgences
+              </Link>
+            )}
           </nav>
 
           <div className="flex items-center gap-3">
@@ -188,6 +194,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               <Link to="/moissonneur-ville" onClick={() => setMobileMenu(false)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-amber-500/10 text-amber-600 font-semibold">
                 <MapPin className="w-4 h-4" /> Moissonneur Ville
+              </Link>
+            )}
+            {(hasPaysRole || hasVilleRole) && (
+              <Link to="/cas-urgents-zone" onClick={() => setMobileMenu(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-red-500/10 text-red-600 font-semibold">
+                🚨 Cas Urgents zone
               </Link>
             )}
           </nav>
