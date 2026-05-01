@@ -26,7 +26,10 @@ const MandateMarketplace = lazy(() => import("./pages/MandateMarketplace"));
 const MoissonneurPays   = lazy(() => import("./pages/MoissonneurPays"));
 const MoissonneurVille  = lazy(() => import("./pages/MoissonneurVille"));
 const PorteurAffaires   = lazy(() => import("./pages/PorteurAffaires"));
+const UrgentCases       = lazy(() => import("./pages/UrgentCases"));
 const NotFound          = lazy(() => import("./pages/NotFound"));
+
+import PWAInstallModal from "@/components/PWAInstallModal";
 
 // ── QueryClient optimisé ──────────────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -80,8 +83,10 @@ const App = () => (
               <Route path="/moissonneur-pays"     element={<MoissonneurPays />} />
               <Route path="/moissonneur-ville"    element={<MoissonneurVille />} />
               <Route path="/porteur-affaires"     element={<PorteurAffaires />} />
+              <Route path="/cas-urgents"          element={<UrgentCases />} />
               <Route path="*"                     element={<NotFound />} />
             </Routes>
+            <PWAInstallModal />
           </Suspense>
         </AuthProvider>
       </BrowserRouter>
