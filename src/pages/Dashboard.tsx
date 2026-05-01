@@ -224,6 +224,22 @@ const Dashboard = () => {
         />
       </div>
 
+      {/* ── BOUTON CAS URGENT ── */}
+      <button
+        onClick={goTo("/cas-urgents")}
+        className="w-full mb-6 p-4 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all flex items-center gap-4"
+      >
+        <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl shrink-0 animate-pulse">
+          🚨
+        </div>
+        <div className="text-left flex-1">
+          <h3 className="font-heading font-bold text-lg">Cas Urgent</h3>
+          <p className="text-xs text-white/90 font-body">
+            Signalez une urgence — alerte immédiate aux Moissonneurs et administrateurs
+          </p>
+        </div>
+      </button>
+
       {/* PWA Installation — composant dédié */}
       <PWAInstallSection />
     </DashboardLayout>
