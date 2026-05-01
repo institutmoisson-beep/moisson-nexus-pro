@@ -207,13 +207,15 @@ const StandPage = () => {
           });
         }
         if (buyItem.is_mlm_pack) {
-          await supabase.rpc("distribute_commissions", {
-            _buyer_user_id: user.id, _pack_id: buyItem.id,
-            _pack_price: price, _pack_name: buyItem.name,
-          }).catch(console.error);
-          if (paymentMode === "wallet" && orderData?.id) {
-            await supabase.rpc("award_msn_coins", { _buyer_user_id: user.id, _order_id: orderData.id }).catch(console.error);
-          }
+          try {
+            await supabase.rpc("distribute_commissions", {
+              _buyer_user_id: user.id, _pack_id: buyItem.id,
+              _pack_price: price, _pack_name: buyItem.name,
+            });
+            if (paymentMode === "wallet" && orderData?.id) {
+              await supabase.rpc("award_msn_coins", { _buyer_user_id: user.id, _order_id: orderData.id });
+            }
+          } catch (e) { console.error(e); }
         }
       } else {
         // Product purchase

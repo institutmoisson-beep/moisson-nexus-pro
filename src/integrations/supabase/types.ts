@@ -907,6 +907,98 @@ export type Database = {
           },
         ]
       }
+      urgent_case_responses: {
+        Row: {
+          case_id: string
+          created_at: string
+          id: string
+          images: string[] | null
+          message: string
+          responder_id: string
+          responder_role: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          message: string
+          responder_id: string
+          responder_role?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          id?: string
+          images?: string[] | null
+          message?: string
+          responder_id?: string
+          responder_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "urgent_case_responses_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "urgent_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      urgent_cases: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          description: string
+          id: string
+          images: string[] | null
+          phone: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          images?: string[] | null
+          phone?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          images?: string[] | null
+          phone?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -957,6 +1049,10 @@ export type Database = {
       award_msn_coins: {
         Args: { _buyer_user_id: string; _order_id: string }
         Returns: undefined
+      }
+      can_access_urgent_case: {
+        Args: { _case_id: string; _user_id: string }
+        Returns: boolean
       }
       distribute_commissions:
         | {
