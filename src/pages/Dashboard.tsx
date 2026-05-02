@@ -4,7 +4,6 @@ import { useEffect, useState, memo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Wallet, Users, TrendingUp, Package, Flame, Coins } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
-import PWAInstallSection from "@/components/PWAInstallSection";
 import { toast } from "sonner";
 
 // ── Stat card mémorisé ──────────────────────────────────
