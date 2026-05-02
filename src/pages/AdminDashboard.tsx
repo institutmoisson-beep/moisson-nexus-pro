@@ -27,12 +27,13 @@ import AdminMandatePacks      from "@/components/admin/AdminMandatePacks";
 import AdminRegionalRoles     from "@/components/admin/AdminRegionalRoles";
 import AdminPorteurAffaires   from "@/components/admin/AdminPorteurAffaires";
 import AdminUrgentCases       from "@/components/admin/AdminUrgentCases";
+import AdminCommunityFund     from "@/components/admin/AdminCommunityFund";
 
 type AdminTab =
   | "overview" | "users" | "packs" | "sectors" | "partners"
   | "transactions" | "payments" | "commissions" | "bonuses"
   | "pro_directory" | "orders" | "fees" | "msn_plan" | "msn_withdrawals"
-  | "mandate_packs" | "regional_roles" | "porteur_affaires" | "urgent_cases";
+  | "mandate_packs" | "regional_roles" | "porteur_affaires" | "urgent_cases" | "community_fund";
 
 const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
   financier:     ["overview", "transactions", "payments", "commissions", "bonuses", "fees", "msn_withdrawals"],
@@ -50,6 +51,7 @@ const STAFF_TAB_ACCESS: Record<string, AdminTab[]> = {
 const ALL_TABS: { key: AdminTab; label: string; icon: React.ReactNode }[] = [
   { key: "overview",          label: "Vue d'ensemble",          icon: <TrendingUp className="w-4 h-4" /> },
   { key: "urgent_cases",      label: "🚨 Cas Urgents",          icon: <TrendingUp className="w-4 h-4" /> },
+  { key: "community_fund",    label: "💰 Fond Communautaire",   icon: <TrendingUp className="w-4 h-4" /> },
   { key: "users",             label: "Utilisateurs",            icon: <Users className="w-4 h-4" /> },
   { key: "pro_directory",     label: "Moissonneurs Pros",       icon: <UserCheck className="w-4 h-4" /> },
   { key: "packs",             label: "Packs",                   icon: <Package className="w-4 h-4" /> },
@@ -223,6 +225,7 @@ const AdminDashboard = () => {
           {activeTab === "regional_roles"   && <AdminRegionalRoles />}
           {activeTab === "porteur_affaires" && <AdminPorteurAffaires />}
           {activeTab === "urgent_cases"     && <AdminUrgentCases />}
+          {activeTab === "community_fund"   && <AdminCommunityFund />}
         </main>
       </div>
     </div>
