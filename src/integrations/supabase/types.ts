@@ -136,6 +136,54 @@ export type Database = {
         }
         Relationships: []
       }
+      community_fund: {
+        Row: {
+          balance: number
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fund_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          id: string
+          reason: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          id?: string
+          reason?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          id?: string
+          reason?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mandate_packs: {
         Row: {
           commission_every_3_days: number
@@ -1046,6 +1094,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_withdraw_from_fund: {
+        Args: { _amount: number; _reason: string }
+        Returns: Json
+      }
       award_msn_coins: {
         Args: { _buyer_user_id: string; _order_id: string }
         Returns: undefined
@@ -1054,6 +1106,7 @@ export type Database = {
         Args: { _case_id: string; _user_id: string }
         Returns: boolean
       }
+      contribute_to_fund: { Args: { _amount: number }; Returns: Json }
       distribute_commissions:
         | {
             Args: {
