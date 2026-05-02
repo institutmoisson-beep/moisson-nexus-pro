@@ -27,7 +27,7 @@ const AdminCommunityFund = () => {
     ]);
     if (f) setBalance(Number(f.balance));
     setTx(t || []);
-    const ids = Array.from(new Set((t || []).map((x: any) => x.user_id)));
+    const ids = Array.from(new Set((t || []).map((x: any) => x.user_id))) as string[];
     if (ids.length) {
       const { data: profs } = await supabase
         .from("profiles").select("user_id, first_name, last_name").in("user_id", ids);
