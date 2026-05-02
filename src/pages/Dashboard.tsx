@@ -226,7 +226,7 @@ const Dashboard = () => {
       {/* ── BOUTON CAS URGENT ── */}
       <button
         onClick={goTo("/cas-urgents")}
-        className="w-full mb-6 p-4 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all flex items-center gap-4"
+        className="w-full mb-4 p-4 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all flex items-center gap-4"
       >
         <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl shrink-0 animate-pulse">
           🚨
@@ -239,8 +239,21 @@ const Dashboard = () => {
         </div>
       </button>
 
-      {/* PWA Installation — composant dédié */}
-      <PWAInstallSection />
+      {/* ── BOUTON FOND COMMUNAUTAIRE ── */}
+      <button
+        onClick={goTo("/fond-communautaire")}
+        className="w-full mb-6 p-4 rounded-xl bg-gradient-to-r from-gold to-amber-500 text-white shadow-lg hover:shadow-xl hover:scale-[1.01] transition-all flex items-center gap-4"
+      >
+        <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl shrink-0">
+          💰
+        </div>
+        <div className="text-left flex-1">
+          <h3 className="font-heading font-bold text-lg">Fond Communautaire</h3>
+          <p className="text-xs text-white/90 font-body">
+            Cotiser, voir le solde et l'historique en temps réel
+          </p>
+        </div>
+      </button>
     </DashboardLayout>
   );
 };
