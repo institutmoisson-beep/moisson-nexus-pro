@@ -1160,6 +1160,8 @@ export type Database = {
         | "admin_debit"
         | "transfer"
         | "product_purchase"
+        | "fund_contribution"
+        | "fund_withdrawal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1311,6 +1313,8 @@ export const Constants = {
         "admin_debit",
         "transfer",
         "product_purchase",
+        "fund_contribution",
+        "fund_withdrawal",
       ],
     },
   },
