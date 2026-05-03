@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Coins, ArrowUpCircle, ArrowDownCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import SearchableHistorySection from "@/components/history/SearchableHistorySection";
 
 const AdminCommunityFund = () => {
   const [balance, setBalance] = useState(0);
@@ -112,42 +113,63 @@ const AdminCommunityFund = () => {
         </p>
       </div>
 
-      <div className="space-y-2">
-        <h3 className="font-heading font-semibold mt-4">Historique complet ({tx.length})</h3>
-        {tx.length === 0 ? (
-          <div className="card-elevated text-center py-6 text-muted-foreground">Aucun mouvement.</div>
-        ) : tx.map((t: any) => {
-          const p = profilesMap[t.user_id];
-          const isW = t.type === "withdrawal";
-          return (
-            <div key={t.id} className="card-elevated">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    isW ? "bg-red-500/10 text-red-600" : "bg-harvest-green/10 text-harvest-green"
-                  }`}>
-                    {isW ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <p className="font-heading font-semibold">
-                      {isW ? "Retrait" : "Cotisation"}
-                      {p && <span className="text-xs text-muted-foreground ml-2">— {p.first_name} {p.last_name}</span>}
-                    </p>
-                    {t.reason && <p className="text-sm text-muted-foreground italic mt-1">Motif : {t.reason}</p>}
-                    <p className="text-xs text-muted-foreground mt-1">{new Date(t.created_at).toLocaleString("fr-FR")}</p>
+      <SearchableHistorySection
+        title={`Historique complet (${tx.length})`}
+        subtitle="Recherchez par code, nom, motif, montant ou date."
+        items={tx}
+        emptyText="Aucun mouvement trouvé."
+        searchPlaceholder="Rechercher par code, nom, motif, montant…"
+        getSearchText={(item) => {
+          const p = profilesMap[item.user_id];
+          return [
+            item.id,
+            item.type,
+            item.reason,
+            item.amount,
+            item.balance_after,
+            item.user_id,
+            p?.first_name,
+            p?.last_name,
+          ].filter(Boolean).join(" ");
+        }}
+        getDateValue={(item) => item.created_at}
+        renderResults={(filtered) => (
+          <div className="space-y-2">
+            {filtered.map((t: any) => {
+              const p = profilesMap[t.user_id];
+              const isW = t.type === "withdrawal";
+              return (
+                <div key={t.id} className="card-elevated">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        isW ? "bg-red-500/10 text-red-600" : "bg-harvest-green/10 text-harvest-green"
+                      }`}>
+                        {isW ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
+                      </div>
+                      <div>
+                        <p className="font-heading font-semibold">
+                          {isW ? "Retrait" : "Cotisation"}
+                          {p && <span className="text-xs text-muted-foreground ml-2">— {p.first_name} {p.last_name}</span>}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 font-body">Code : {t.id.slice(0, 8).toUpperCase()}</p>
+                        {t.reason && <p className="text-sm text-muted-foreground italic mt-1">Motif : {t.reason}</p>}
+                        <p className="text-xs text-muted-foreground mt-1">{new Date(t.created_at).toLocaleString("fr-FR")}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-heading font-bold ${isW ? "text-red-600" : "text-harvest-green"}`}>
+                        {isW ? "−" : "+"} {Number(t.amount).toLocaleString("fr-FR")}
+                      </p>
+                      <Badge variant="secondary" className="mt-1">Solde : {Number(t.balance_after).toLocaleString("fr-FR")}</Badge>
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`font-heading font-bold ${isW ? "text-red-600" : "text-harvest-green"}`}>
-                    {isW ? "−" : "+"} {Number(t.amount).toLocaleString("fr-FR")}
-                  </p>
-                  <Badge variant="secondary" className="mt-1">Solde : {Number(t.balance_after).toLocaleString("fr-FR")}</Badge>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        )}
+      />
     </div>
   );
 };
