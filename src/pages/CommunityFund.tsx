@@ -13,6 +13,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Coins, ArrowDownCircle, ArrowUpCircle, Loader2, Plus, History, Users } from "lucide-react";
 import { toast } from "sonner";
+import SearchableHistorySection from "@/components/history/SearchableHistorySection";
 
 type FundTx = {
   id: string;
@@ -191,58 +192,77 @@ const TxList = ({ list, profilesMap, loading, currentUserId, hideName }: {
   currentUserId?: string; hideName?: boolean;
 }) => {
   if (loading) return <div className="text-center py-8 text-muted-foreground">Chargement…</div>;
-  if (list.length === 0) return (
-    <div className="card-elevated text-center py-8 text-muted-foreground">
-      Aucun mouvement pour l'instant.
-    </div>
-  );
   return (
-    <div className="space-y-2 mt-3">
-      {list.map(tx => {
+    <SearchableHistorySection
+      title="Historique"
+      subtitle="Recherchez par code, nom, montant, motif ou période."
+      items={list}
+      emptyText="Aucun mouvement trouvé pour ces filtres."
+      searchPlaceholder="Rechercher par code, nom, montant, motif…"
+      getSearchText={(tx) => {
         const p = profilesMap[tx.user_id];
-        const isWithdraw = tx.type === "withdrawal";
-        return (
-          <div key={tx.id} className="card-elevated">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                  isWithdraw ? "bg-red-500/10 text-red-600" : "bg-harvest-green/10 text-harvest-green"
-                }`}>
-                  {isWithdraw ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
-                </div>
-                <div>
-                  <p className="font-heading font-semibold text-foreground">
-                    {isWithdraw ? "Retrait administrateur" : "Cotisation"}
-                    {!hideName && p && (
-                      <span className="text-xs text-muted-foreground font-body ml-2">
-                        — {p.first_name} {p.last_name}
-                        {tx.user_id === currentUserId && " (vous)"}
-                      </span>
-                    )}
-                  </p>
-                  {tx.reason && (
-                    <p className="text-sm text-muted-foreground font-body mt-1 italic">
-                      Motif : {tx.reason}
+        return [
+          tx.id,
+          tx.type,
+          tx.reason,
+          tx.amount,
+          tx.balance_after,
+          p?.first_name,
+          p?.last_name,
+          tx.user_id,
+        ].filter(Boolean).join(" ");
+      }}
+      getDateValue={(tx) => tx.created_at}
+      renderResults={(filtered) => (
+        <div className="space-y-2 mt-3">
+          {filtered.map(tx => {
+            const p = profilesMap[tx.user_id];
+            const isWithdraw = tx.type === "withdrawal";
+            return (
+              <div key={tx.id} className="card-elevated">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                      isWithdraw ? "bg-red-500/10 text-red-600" : "bg-harvest-green/10 text-harvest-green"
+                    }`}>
+                      {isWithdraw ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className="font-heading font-semibold text-foreground">
+                        {isWithdraw ? "Retrait administrateur" : "Cotisation"}
+                        {!hideName && p && (
+                          <span className="text-xs text-muted-foreground font-body ml-2">
+                            — {p.first_name} {p.last_name}
+                            {tx.user_id === currentUserId && " (vous)"}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 font-body">Code : {tx.id.slice(0, 8).toUpperCase()}</p>
+                      {tx.reason && (
+                        <p className="text-sm text-muted-foreground font-body mt-1 italic">
+                          Motif : {tx.reason}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(tx.created_at).toLocaleString("fr-FR")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className={`font-heading font-bold ${isWithdraw ? "text-red-600" : "text-harvest-green"}`}>
+                      {isWithdraw ? "−" : "+"} {Number(tx.amount).toLocaleString("fr-FR")} FCFA
                     </p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(tx.created_at).toLocaleString("fr-FR")}
-                  </p>
+                    <Badge variant="secondary" className="mt-1">
+                      Solde : {Number(tx.balance_after).toLocaleString("fr-FR")}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                <p className={`font-heading font-bold ${isWithdraw ? "text-red-600" : "text-harvest-green"}`}>
-                  {isWithdraw ? "−" : "+"} {Number(tx.amount).toLocaleString("fr-FR")} FCFA
-                </p>
-                <Badge variant="secondary" className="mt-1">
-                  Solde : {Number(tx.balance_after).toLocaleString("fr-FR")}
-                </Badge>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+            );
+          })}
+        </div>
+      )}
+    />
   );
 };
 

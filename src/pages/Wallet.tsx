@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+import SearchableHistorySection from "@/components/history/SearchableHistorySection";
 
 const CURRENCIES = [
   { code: "XOF", label: "FCFA (XOF)", symbol: "FCFA", rate: 1 },
@@ -717,66 +718,78 @@ const WalletPage = () => {
 
       {/* ====== TRANSACTION HISTORY ====== */}
       <div className="card-elevated">
-        <h2 className="text-lg font-heading font-semibold text-foreground mb-4">📋 Historique des transactions</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm font-body">
-            <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                <th className="text-left py-2 px-3">Date</th>
-                <th className="text-left py-2 px-3">Type</th>
-                <th className="text-right py-2 px-3">Montant</th>
-                <th className="text-left py-2 px-3">Statut</th>
-                <th className="text-left py-2 px-3 hidden md:table-cell">Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map(tx => (
-                <tr key={tx.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
-                  <td className="py-2 px-3 whitespace-nowrap">
-                    <span>{new Date(tx.created_at).toLocaleDateString("fr-FR")}</span>
-                    <span className="block text-[10px] text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </td>
-                  <td className="py-2 px-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                      tx.type === "commission" ? "bg-gold/20 text-gold" :
-                      tx.type === "bonus" ? "bg-harvest-green/20 text-harvest-green" :
-                      tx.type === "deposit" ? "bg-primary/20 text-primary" :
-                      tx.type === "admin_credit" ? "bg-harvest-green/20 text-harvest-green" :
-                      tx.type === "admin_debit" ? "bg-destructive/20 text-destructive" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
-                      {TYPE_LABELS[tx.type] || tx.type}
-                    </span>
-                  </td>
-                  <td className={`py-2 px-3 text-right font-semibold whitespace-nowrap ${isPositive(tx) ? "text-harvest-green" : "text-destructive"}`}>
-                    {getTransactionSign(tx)}{Number(tx.amount).toLocaleString("fr-FR")} FCFA
-                  </td>
-                  <td className="py-2 px-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      tx.status === "approved" ? "bg-harvest-green/20 text-harvest-green" :
-                      tx.status === "rejected" ? "bg-destructive/20 text-destructive" :
-                      "bg-gold/20 text-gold"
-                    }`}>
-                      {tx.status === "approved" ? "✓" : tx.status === "rejected" ? "✗" : "⏳"}
-                    </span>
-                  </td>
-                  <td className="py-2 px-3 text-muted-foreground text-xs hidden md:table-cell max-w-[200px] truncate">
-                    {tx.description || "—"}
-                  </td>
-                </tr>
-              ))}
-              {transactions.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-muted-foreground font-body">
-                    Aucune transaction pour le moment
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <SearchableHistorySection
+          title="📋 Historique des transactions"
+          subtitle="Recherchez par code, type, statut, description, montant ou date."
+          items={transactions}
+          emptyText="Aucune transaction pour le moment"
+          searchPlaceholder="Rechercher par code, type, description, montant…"
+          getSearchText={(tx) => [
+            tx.id,
+            tx.type,
+            tx.status,
+            tx.description,
+            tx.amount,
+            tx.transaction_contact,
+          ].filter(Boolean).join(" ")}
+          getDateValue={(tx) => tx.created_at}
+          renderResults={(items) => (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm font-body">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground">
+                    <th className="text-left py-2 px-3">Date</th>
+                    <th className="text-left py-2 px-3">Code</th>
+                    <th className="text-left py-2 px-3">Type</th>
+                    <th className="text-right py-2 px-3">Montant</th>
+                    <th className="text-left py-2 px-3">Statut</th>
+                    <th className="text-left py-2 px-3 hidden md:table-cell">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(tx => (
+                    <tr key={tx.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        <span>{new Date(tx.created_at).toLocaleDateString("fr-FR")}</span>
+                        <span className="block text-[10px] text-muted-foreground">
+                          {new Date(tx.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{tx.id.slice(0, 8).toUpperCase()}</td>
+                      <td className="py-2 px-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                          tx.type === "commission" ? "bg-gold/20 text-gold" :
+                          tx.type === "bonus" ? "bg-harvest-green/20 text-harvest-green" :
+                          tx.type === "deposit" ? "bg-primary/20 text-primary" :
+                          tx.type === "admin_credit" ? "bg-harvest-green/20 text-harvest-green" :
+                          tx.type === "admin_debit" ? "bg-destructive/20 text-destructive" :
+                          "bg-muted text-muted-foreground"
+                        }`}>
+                          {TYPE_LABELS[tx.type] || tx.type}
+                        </span>
+                      </td>
+                      <td className={`py-2 px-3 text-right font-semibold whitespace-nowrap ${isPositive(tx) ? "text-harvest-green" : "text-destructive"}`}>
+                        {getTransactionSign(tx)}{Number(tx.amount).toLocaleString("fr-FR")} FCFA
+                      </td>
+                      <td className="py-2 px-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          tx.status === "approved" ? "bg-harvest-green/20 text-harvest-green" :
+                          tx.status === "rejected" ? "bg-destructive/20 text-destructive" :
+                          "bg-gold/20 text-gold"
+                        }`}>
+                          {tx.status === "approved" ? "✓" : tx.status === "rejected" ? "✗" : "⏳"}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-muted-foreground text-xs hidden md:table-cell max-w-[200px] truncate">
+                        {tx.description || "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        />
       </div>
     </DashboardLayout>
   );
