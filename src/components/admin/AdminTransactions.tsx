@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle, Ban, RefreshCw } from "lucide-react";
+import SearchableHistorySection from "@/components/history/SearchableHistorySection";
 
 const TYPE_LABELS: Record<string, string> = {
   deposit: "Dépôt",
@@ -102,100 +103,114 @@ const AdminTransactions = () => {
         </button>
       </div>
 
-      {/* Filtres */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <select value={filterType} onChange={e => setFilterType(e.target.value)}
-          className="px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm">
-          <option value="">Tous les types</option>
-          {Object.entries(TYPE_LABELS).map(([key, label]) => (
-            <option key={key} value={key}>{label}</option>
-          ))}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm">
-          <option value="">Tous les statuts</option>
-          <option value="pending">En attente</option>
-          <option value="approved">Approuvé</option>
-          <option value="rejected">Rejeté</option>
-        </select>
-        <span className="text-xs text-muted-foreground font-body self-center">{filtered.length} transaction(s)</span>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm font-body">
-          <thead>
-            <tr className="border-b border-border text-muted-foreground">
-              <th className="text-left py-2 px-3">Date</th>
-              <th className="text-left py-2 px-3">Utilisateur</th>
-              <th className="text-left py-2 px-3">Type</th>
-              <th className="text-right py-2 px-3">Montant</th>
-              <th className="text-left py-2 px-3">Contact</th>
-              <th className="text-left py-2 px-3">Description</th>
-              <th className="text-left py-2 px-3">Statut</th>
-              <th className="text-right py-2 px-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((tx: any) => (
-              <tr key={tx.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
-                <td className="py-2 px-3 whitespace-nowrap">
-                  {new Date(tx.created_at).toLocaleDateString("fr-FR")}
-                  <span className="block text-[10px] text-muted-foreground">
-                    {new Date(tx.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </td>
-                <td className="py-2 px-3 font-medium whitespace-nowrap">{getUserName(tx.user_id)}</td>
-                <td className="py-2 px-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                    tx.type === "commission" ? "bg-gold/20 text-gold" :
-                    tx.type === "admin_credit" ? "bg-harvest-green/20 text-harvest-green" :
-                    tx.type === "admin_debit" ? "bg-destructive/20 text-destructive" :
-                    tx.type === "deposit" ? "bg-primary/20 text-primary" :
-                    "bg-muted text-muted-foreground"
-                  }`}>
-                    {TYPE_LABELS[tx.type] || tx.type}
-                  </span>
-                </td>
-                <td className="py-2 px-3 text-right font-semibold whitespace-nowrap">
-                  {Number(tx.amount).toLocaleString("fr-FR")} FCFA
-                </td>
-                <td className="py-2 px-3 text-xs text-muted-foreground">
-                  {tx.transaction_contact || "—"}
-                </td>
-                <td className="py-2 px-3 text-xs text-muted-foreground max-w-[200px] truncate">
-                  {tx.description || "—"}
-                </td>
-                <td className="py-2 px-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusStyle(tx.status)}`}>
-                    {statusLabel(tx.status)}
-                  </span>
-                </td>
-                <td className="py-2 px-3 text-right">
-                  {tx.status === "pending" && (tx.type === "deposit" || tx.type === "withdrawal") && (
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => handleTransaction(tx.id, "approved")}
-                        className="p-1.5 rounded-md bg-harvest-green/10 hover:bg-harvest-green/20 transition-colors" title="Approuver">
-                        <CheckCircle className="w-4 h-4 text-harvest-green" />
-                      </button>
-                      <button onClick={() => handleTransaction(tx.id, "rejected")}
-                        className="p-1.5 rounded-md bg-destructive/10 hover:bg-destructive/20 transition-colors" title="Rejeter">
-                        <Ban className="w-4 h-4 text-destructive" />
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={8} className="py-12 text-center text-muted-foreground font-body">
-                  {loading ? "Chargement..." : "Aucune transaction trouvée"}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <SearchableHistorySection
+        title="Historique des transactions"
+        subtitle="Recherche par code, nom, contact, description, type, statut ou date."
+        items={filtered}
+        emptyText={loading ? "Chargement..." : "Aucune transaction trouvée"}
+        searchPlaceholder="Rechercher par code, nom, contact, description…"
+        getSearchText={(tx) => [
+          tx.id,
+          tx.type,
+          tx.status,
+          tx.amount,
+          tx.transaction_contact,
+          tx.description,
+          getUserName(tx.user_id),
+          tx.user_id,
+        ].filter(Boolean).join(" ")}
+        getDateValue={(tx) => tx.created_at}
+        extraFilters={
+          <div className="flex flex-wrap gap-3">
+            <select value={filterType} onChange={e => setFilterType(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm">
+              <option value="">Tous les types</option>
+              {Object.entries(TYPE_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm">
+              <option value="">Tous les statuts</option>
+              <option value="pending">En attente</option>
+              <option value="approved">Approuvé</option>
+              <option value="rejected">Rejeté</option>
+            </select>
+          </div>
+        }
+        renderResults={(items) => (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm font-body">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="text-left py-2 px-3">Date</th>
+                  <th className="text-left py-2 px-3">Code</th>
+                  <th className="text-left py-2 px-3">Utilisateur</th>
+                  <th className="text-left py-2 px-3">Type</th>
+                  <th className="text-right py-2 px-3">Montant</th>
+                  <th className="text-left py-2 px-3">Contact</th>
+                  <th className="text-left py-2 px-3">Description</th>
+                  <th className="text-left py-2 px-3">Statut</th>
+                  <th className="text-right py-2 px-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((tx: any) => (
+                  <tr key={tx.id} className="border-b border-border/50 hover:bg-secondary/30 transition-colors">
+                    <td className="py-2 px-3 whitespace-nowrap">
+                      {new Date(tx.created_at).toLocaleDateString("fr-FR")}
+                      <span className="block text-[10px] text-muted-foreground">
+                        {new Date(tx.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{tx.id.slice(0, 8).toUpperCase()}</td>
+                    <td className="py-2 px-3 font-medium whitespace-nowrap">{getUserName(tx.user_id)}</td>
+                    <td className="py-2 px-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                        tx.type === "commission" ? "bg-gold/20 text-gold" :
+                        tx.type === "admin_credit" ? "bg-harvest-green/20 text-harvest-green" :
+                        tx.type === "admin_debit" ? "bg-destructive/20 text-destructive" :
+                        tx.type === "deposit" ? "bg-primary/20 text-primary" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                        {TYPE_LABELS[tx.type] || tx.type}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-right font-semibold whitespace-nowrap">
+                      {Number(tx.amount).toLocaleString("fr-FR")} FCFA
+                    </td>
+                    <td className="py-2 px-3 text-xs text-muted-foreground">
+                      {tx.transaction_contact || "—"}
+                    </td>
+                    <td className="py-2 px-3 text-xs text-muted-foreground max-w-[200px] truncate">
+                      {tx.description || "—"}
+                    </td>
+                    <td className="py-2 px-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusStyle(tx.status)}`}>
+                        {statusLabel(tx.status)}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-right">
+                      {tx.status === "pending" && (tx.type === "deposit" || tx.type === "withdrawal") && (
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => handleTransaction(tx.id, "approved")}
+                            className="p-1.5 rounded-md bg-harvest-green/10 hover:bg-harvest-green/20 transition-colors" title="Approuver">
+                            <CheckCircle className="w-4 h-4 text-harvest-green" />
+                          </button>
+                          <button onClick={() => handleTransaction(tx.id, "rejected")}
+                            className="p-1.5 rounded-md bg-destructive/10 hover:bg-destructive/20 transition-colors" title="Rejeter">
+                            <Ban className="w-4 h-4 text-destructive" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      />
     </div>
   );
 };
