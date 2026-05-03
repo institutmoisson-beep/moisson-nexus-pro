@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logo from "@/assets/logo-moisson.png";
+import MathCaptcha from "@/components/MathCaptcha";
 
 const COUNTRY_GROUPS = [
   {
@@ -85,6 +86,7 @@ const Register = () => {
     confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
+  const [captchaOk, setCaptchaOk] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
 
@@ -94,6 +96,16 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!captchaOk) {
+      toast.error("Veuillez résoudre la vérification anti-robot");
+      return;
+    }
+
+    if (form.password.length < 8) {
+      toast.error("Le mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
 
     if (form.password !== form.confirmPassword) {
       toast.error("Les mots de passe ne correspondent pas");
@@ -229,7 +241,9 @@ const Register = () => {
                 className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground font-body focus:ring-2 focus:ring-ring focus:border-transparent outline-none transition-all" />
             </div>
 
-            <button type="submit" disabled={loading} className="btn-gold w-full !text-base disabled:opacity-50">
+            <MathCaptcha onValidChange={setCaptchaOk} />
+
+            <button type="submit" disabled={loading || !captchaOk} className="btn-gold w-full !text-base disabled:opacity-50">
               {loading ? "Création..." : "🌱 Créer mon compte Moissonneur"}
             </button>
           </form>

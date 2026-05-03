@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { lazy, Suspense } from "react";
+import InstallPWA from "@/components/InstallPWA";
 
 // ── Lazy loading de toutes les pages ─────────────────────────────────────────
 const Index             = lazy(() => import("./pages/Index"));
@@ -64,6 +65,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <InstallPWA />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/"                     element={<Index />} />
