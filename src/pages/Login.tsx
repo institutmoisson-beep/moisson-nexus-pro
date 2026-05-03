@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logo from "@/assets/logo-moisson.png";
+import MathCaptcha from "@/components/MathCaptcha";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,11 +13,16 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaOk, setCaptchaOk] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captchaOk) {
+      toast.error("Veuillez résoudre la vérification anti-robot");
+      return;
+    }
     setLoading(true);
 
     let loginEmail = email;
@@ -114,7 +120,9 @@ const Login = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="btn-hero w-full !text-base disabled:opacity-50">
+            <MathCaptcha onValidChange={setCaptchaOk} />
+
+            <button type="submit" disabled={loading || !captchaOk} className="btn-hero w-full !text-base disabled:opacity-50">
               {loading ? "Connexion..." : "Se connecter"}
             </button>
           </form>
