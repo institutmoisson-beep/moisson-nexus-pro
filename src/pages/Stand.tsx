@@ -720,7 +720,7 @@ const StandPage = () => {
                 <h3 className="text-2xl font-heading font-bold text-foreground mb-2">
                   {paymentMode === "cod" ? "Commande enregistrée !" : "Achat réussi ! 🌾"}
                 </h3>
-                <p className="text-sm text-muted-foreground font-body mb-6">
+                <p className="text-sm text-muted-foreground font-body mb-4">
                   {paymentMode === "cod"
                     ? "Votre commande est enregistrée. Vous paierez à la livraison."
                     : paymentMode === "msn"
@@ -728,21 +728,23 @@ const StandPage = () => {
                     : `${Number(buyItem.price).toLocaleString("fr-FR")} FCFA déduits de votre portefeuille.`
                   }
                 </p>
-                {paymentMode !== "cod" && (
-                  <p className="text-xs text-muted-foreground font-body mb-4">
-                    Nouveau solde :{" "}
-                    <span className="font-bold text-primary">
-                      {paymentMode === "wallet"
-                        ? (profile.wallet_balance - Number(buyItem.price)).toLocaleString("fr-FR")
-                        : Number(profile.wallet_balance).toLocaleString("fr-FR")
-                      } FCFA
-                    </span>
-                    {paymentMode === "msn" && (
-                      <> | <span className="font-bold text-gold">{msnCoins - itemCoins} coins restants</span></>
-                    )}
-                  </p>
+                {digitalDelivery && (
+                  <div className="bg-gradient-to-br from-gold/10 to-primary/10 border-2 border-gold/30 rounded-xl p-4 mb-4 text-left">
+                    <p className="text-xs font-bold text-gold uppercase tracking-wider mb-2 flex items-center gap-1">
+                      🎁 Contenu numérique livré
+                    </p>
+                    <div className="bg-card rounded-lg p-3 break-all text-sm font-mono text-foreground border border-border">
+                      {digitalDelivery}
+                    </div>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(digitalDelivery); toast.success("Copié !"); }}
+                      className="mt-2 text-xs text-primary font-semibold hover:underline"
+                    >
+                      📋 Copier
+                    </button>
+                  </div>
                 )}
-                <button onClick={() => { setBuyItem(null); setPurchaseDone(false); }} className="w-full btn-gold !text-sm !py-3">
+                <button onClick={() => { setBuyItem(null); setPurchaseDone(false); setDigitalDelivery(null); }} className="w-full btn-gold !text-sm !py-3">
                   Continuer les achats
                 </button>
               </div>
