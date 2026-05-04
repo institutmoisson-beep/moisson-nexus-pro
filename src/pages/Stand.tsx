@@ -220,12 +220,18 @@ const StandPage = () => {
       } else {
         // Product purchase
         if (paymentMode === "wallet") {
-          await supabase.from("profiles").update({ wallet_balance: profile.wallet_balance - price }).eq("user_id", user.id);
-          await supabase.from("transactions").insert({
-            user_id: user.id, amount: price, type: "product_purchase" as const, status: "approved" as const,
-            description: `Achat produit: ${buyItem.name}`,
-            processed_at: new Date().toISOString(),
+          const { data: rpcData, error: rpcErr } = await supabase.rpc("purchase_partner_product" as any, {
+            _product_id: buyItem.id,
+            _delivery: {
+              address: deliveryForm.address, city: deliveryForm.city,
+              country: deliveryForm.country, phone: deliveryForm.phone,
+            } as any,
           });
+          if (rpcErr) throw new Error(rpcErr.message);
+          const result: any = rpcData;
+          if (result?.is_digital && result?.digital_content) {
+            setDigitalDelivery(result.digital_content);
+          }
         } else if (paymentMode === "msn") {
           await deductMSNCoins(coins);
           await supabase.from("transactions").insert({
@@ -234,6 +240,9 @@ const StandPage = () => {
             metadata: { coins_used: coins },
             processed_at: new Date().toISOString(),
           });
+          if (buyItem.is_digital && buyItem.digital_content) {
+            setDigitalDelivery(buyItem.digital_content);
+          }
         } else {
           // COD
           await supabase.from("transactions").insert({
