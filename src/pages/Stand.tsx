@@ -656,7 +656,17 @@ const StandPage = () => {
                                     <span className="flex items-center gap-1 text-gold">
                                       <Flame className="w-3 h-3" />{prodCoins} coins{canCoin && <span className="text-harvest-green">✓</span>}
                                     </span>
-                                    {prod.allow_cod && (
+                                    {prod.is_digital && (
+                                      <span className="flex items-center gap-1 text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-semibold">
+                                        🌐 Numérique
+                                      </span>
+                                    )}
+                                    {prod.stock !== null && prod.stock !== undefined && (
+                                      <span className={`px-1.5 py-0.5 rounded-full font-semibold ${prod.stock > 0 ? "bg-secondary text-foreground" : "bg-destructive/10 text-destructive"}`}>
+                                        {prod.stock > 0 ? `Stock: ${prod.stock}` : "Rupture"}
+                                      </span>
+                                    )}
+                                    {prod.allow_cod && !prod.is_digital && (
                                       <span className="flex items-center gap-1 text-harvest-green bg-harvest-green/10 px-1.5 py-0.5 rounded-full">
                                         <Truck className="w-2.5 h-2.5" /> COD
                                       </span>
