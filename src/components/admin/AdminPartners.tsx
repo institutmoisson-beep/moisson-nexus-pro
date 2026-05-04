@@ -69,11 +69,14 @@ const AdminPartners = () => {
       partner_company_id: showProductForm, name: productForm.name,
       description: productForm.description, price: Number(productForm.price),
       allow_cod: productForm.allow_cod, images: productImages,
-    });
+      is_digital: productForm.is_digital,
+      digital_content: productForm.is_digital ? productForm.digital_content : null,
+      stock: productForm.stock ? Number(productForm.stock) : null,
+    } as any);
     if (error) { toast.error("Erreur: " + error.message); return; }
     toast.success("Produit ajouté !");
     setShowProductForm(null);
-    setProductForm({ name: "", description: "", price: "", allow_cod: false });
+    setProductForm({ name: "", description: "", price: "", allow_cod: false, is_digital: false, digital_content: "", stock: "" });
     setProductImages([]); loadData();
   };
 
