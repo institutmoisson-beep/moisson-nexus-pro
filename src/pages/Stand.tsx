@@ -271,7 +271,8 @@ const StandPage = () => {
   const itemCoins = buyItem ? coinsNeededFor(Number(buyItem.price)) : 0;
   const canPayMSN = buyItem ? msnCoins >= itemCoins : false;
   const canPayWallet = buyItem ? (profile?.wallet_balance || 0) >= Number(buyItem.price) : false;
-  const canCOD = buyItemType === "product" && buyItem?.allow_cod;
+  const canCOD = buyItemType === "product" && buyItem?.allow_cod && !buyItem?.is_digital;
+  const isDigitalBuy = buyItemType === "product" && buyItem?.is_digital;
 
   return (
     <div className="min-h-screen bg-background">
