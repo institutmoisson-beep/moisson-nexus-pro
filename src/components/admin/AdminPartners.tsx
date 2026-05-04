@@ -164,11 +164,22 @@ const AdminPartners = () => {
                   className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
                 <textarea placeholder="Description" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})}
                   className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" rows={2} />
+                <input placeholder="Stock disponible (laisser vide = illimité)" type="number" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
                 <label className="flex items-center gap-2 text-sm font-body text-foreground">
                   <input type="checkbox" checked={productForm.allow_cod} onChange={e => setProductForm({...productForm, allow_cod: e.target.checked})} />
                   Paiement à la livraison autorisé
                 </label>
-                <ImageUploader folder="products" images={productImages} onChange={setProductImages} max={4} label="Images du produit" />
+                <label className="flex items-center gap-2 text-sm font-body text-foreground">
+                  <input type="checkbox" checked={productForm.is_digital} onChange={e => setProductForm({...productForm, is_digital: e.target.checked})} />
+                  🌐 Produit numérique / virtuel (livraison instantanée)
+                </label>
+                {productForm.is_digital && (
+                  <textarea placeholder="Contenu numérique (lien de téléchargement, code d'accès, clé...)" value={productForm.digital_content}
+                    onChange={e => setProductForm({...productForm, digital_content: e.target.value})}
+                    className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" rows={2} />
+                )}
+                <ImageUploader folder="products" images={productImages} onChange={setProductImages} max={6} label="Images du produit" />
                 <button onClick={handleCreateProduct} className="btn-gold !text-xs !py-1.5">Ajouter le produit</button>
               </div>
             )}
