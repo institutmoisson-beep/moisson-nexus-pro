@@ -38,6 +38,7 @@ const StandPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [purchaseDone, setPurchaseDone] = useState(false);
+  const [digitalDelivery, setDigitalDelivery] = useState<string | null>(null);
 
   // MSN / exchange rate state
   const [msnCoins, setMsnCoins] = useState(0);
@@ -220,12 +221,18 @@ const StandPage = () => {
       } else {
         // Product purchase
         if (paymentMode === "wallet") {
-          await supabase.from("profiles").update({ wallet_balance: profile.wallet_balance - price }).eq("user_id", user.id);
-          await supabase.from("transactions").insert({
-            user_id: user.id, amount: price, type: "product_purchase" as const, status: "approved" as const,
-            description: `Achat produit: ${buyItem.name}`,
-            processed_at: new Date().toISOString(),
+          const { data: rpcData, error: rpcErr } = await supabase.rpc("purchase_partner_product" as any, {
+            _product_id: buyItem.id,
+            _delivery: {
+              address: deliveryForm.address, city: deliveryForm.city,
+              country: deliveryForm.country, phone: deliveryForm.phone,
+            } as any,
           });
+          if (rpcErr) throw new Error(rpcErr.message);
+          const result: any = rpcData;
+          if (result?.is_digital && result?.digital_content) {
+            setDigitalDelivery(result.digital_content);
+          }
         } else if (paymentMode === "msn") {
           await deductMSNCoins(coins);
           await supabase.from("transactions").insert({
@@ -234,6 +241,9 @@ const StandPage = () => {
             metadata: { coins_used: coins },
             processed_at: new Date().toISOString(),
           });
+          if (buyItem.is_digital && buyItem.digital_content) {
+            setDigitalDelivery(buyItem.digital_content);
+          }
         } else {
           // COD
           await supabase.from("transactions").insert({
@@ -261,7 +271,8 @@ const StandPage = () => {
   const itemCoins = buyItem ? coinsNeededFor(Number(buyItem.price)) : 0;
   const canPayMSN = buyItem ? msnCoins >= itemCoins : false;
   const canPayWallet = buyItem ? (profile?.wallet_balance || 0) >= Number(buyItem.price) : false;
-  const canCOD = buyItemType === "product" && buyItem?.allow_cod;
+  const canCOD = buyItemType === "product" && buyItem?.allow_cod && !buyItem?.is_digital;
+  const isDigitalBuy = buyItemType === "product" && buyItem?.is_digital;
 
   return (
     <div className="min-h-screen bg-background">
@@ -646,7 +657,17 @@ const StandPage = () => {
                                     <span className="flex items-center gap-1 text-gold">
                                       <Flame className="w-3 h-3" />{prodCoins} coins{canCoin && <span className="text-harvest-green">✓</span>}
                                     </span>
-                                    {prod.allow_cod && (
+                                    {prod.is_digital && (
+                                      <span className="flex items-center gap-1 text-primary bg-primary/10 px-1.5 py-0.5 rounded-full font-semibold">
+                                        🌐 Numérique
+                                      </span>
+                                    )}
+                                    {prod.stock !== null && prod.stock !== undefined && (
+                                      <span className={`px-1.5 py-0.5 rounded-full font-semibold ${prod.stock > 0 ? "bg-secondary text-foreground" : "bg-destructive/10 text-destructive"}`}>
+                                        {prod.stock > 0 ? `Stock: ${prod.stock}` : "Rupture"}
+                                      </span>
+                                    )}
+                                    {prod.allow_cod && !prod.is_digital && (
                                       <span className="flex items-center gap-1 text-harvest-green bg-harvest-green/10 px-1.5 py-0.5 rounded-full">
                                         <Truck className="w-2.5 h-2.5" /> COD
                                       </span>
@@ -710,7 +731,7 @@ const StandPage = () => {
                 <h3 className="text-2xl font-heading font-bold text-foreground mb-2">
                   {paymentMode === "cod" ? "Commande enregistrée !" : "Achat réussi ! 🌾"}
                 </h3>
-                <p className="text-sm text-muted-foreground font-body mb-6">
+                <p className="text-sm text-muted-foreground font-body mb-4">
                   {paymentMode === "cod"
                     ? "Votre commande est enregistrée. Vous paierez à la livraison."
                     : paymentMode === "msn"
@@ -718,21 +739,23 @@ const StandPage = () => {
                     : `${Number(buyItem.price).toLocaleString("fr-FR")} FCFA déduits de votre portefeuille.`
                   }
                 </p>
-                {paymentMode !== "cod" && (
-                  <p className="text-xs text-muted-foreground font-body mb-4">
-                    Nouveau solde :{" "}
-                    <span className="font-bold text-primary">
-                      {paymentMode === "wallet"
-                        ? (profile.wallet_balance - Number(buyItem.price)).toLocaleString("fr-FR")
-                        : Number(profile.wallet_balance).toLocaleString("fr-FR")
-                      } FCFA
-                    </span>
-                    {paymentMode === "msn" && (
-                      <> | <span className="font-bold text-gold">{msnCoins - itemCoins} coins restants</span></>
-                    )}
-                  </p>
+                {digitalDelivery && (
+                  <div className="bg-gradient-to-br from-gold/10 to-primary/10 border-2 border-gold/30 rounded-xl p-4 mb-4 text-left">
+                    <p className="text-xs font-bold text-gold uppercase tracking-wider mb-2 flex items-center gap-1">
+                      🎁 Contenu numérique livré
+                    </p>
+                    <div className="bg-card rounded-lg p-3 break-all text-sm font-mono text-foreground border border-border">
+                      {digitalDelivery}
+                    </div>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(digitalDelivery); toast.success("Copié !"); }}
+                      className="mt-2 text-xs text-primary font-semibold hover:underline"
+                    >
+                      📋 Copier
+                    </button>
+                  </div>
                 )}
-                <button onClick={() => { setBuyItem(null); setPurchaseDone(false); }} className="w-full btn-gold !text-sm !py-3">
+                <button onClick={() => { setBuyItem(null); setPurchaseDone(false); setDigitalDelivery(null); }} className="w-full btn-gold !text-sm !py-3">
                   Continuer les achats
                 </button>
               </div>
@@ -858,19 +881,28 @@ const StandPage = () => {
 
                   {/* Delivery form */}
                   <form onSubmit={handleBuy} className="space-y-3">
-                    <p className="text-sm font-medium text-foreground font-body flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-primary" /> Adresse de livraison
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input placeholder="Pays" value={deliveryForm.country} onChange={e => setDeliveryForm({...deliveryForm, country: e.target.value})}
-                        className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm col-span-2" />
-                      <input placeholder="Ville" value={deliveryForm.city} onChange={e => setDeliveryForm({...deliveryForm, city: e.target.value})}
-                        className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
-                      <input placeholder="Quartier / Rue" value={deliveryForm.street} onChange={e => setDeliveryForm({...deliveryForm, street: e.target.value})}
-                        className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
-                    </div>
-                    <input placeholder="Contact téléphone *" required value={deliveryForm.phone} onChange={e => setDeliveryForm({...deliveryForm, phone: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
+                    {isDigitalBuy ? (
+                      <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-xs font-body text-foreground flex items-start gap-2">
+                        <span className="text-lg">🌐</span>
+                        <span>Produit numérique — livraison <b>instantanée</b> après paiement. Aucune adresse requise.</span>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-foreground font-body flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-primary" /> Adresse de livraison
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input placeholder="Pays" value={deliveryForm.country} onChange={e => setDeliveryForm({...deliveryForm, country: e.target.value})}
+                            className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm col-span-2" />
+                          <input placeholder="Ville" value={deliveryForm.city} onChange={e => setDeliveryForm({...deliveryForm, city: e.target.value})}
+                            className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
+                          <input placeholder="Quartier / Rue" value={deliveryForm.street} onChange={e => setDeliveryForm({...deliveryForm, street: e.target.value})}
+                            className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
+                        </div>
+                        <input placeholder="Contact téléphone *" required value={deliveryForm.phone} onChange={e => setDeliveryForm({...deliveryForm, phone: e.target.value})}
+                          className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
+                      </>
+                    )}
 
                     {!canPayWallet && !canPayMSN && !canCOD && (
                       <div className="flex items-center gap-2 text-destructive text-xs font-body bg-destructive/5 border border-destructive/20 rounded-xl p-3">

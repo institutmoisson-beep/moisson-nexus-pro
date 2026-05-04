@@ -675,36 +675,45 @@ export type Database = {
           allow_cod: boolean
           created_at: string
           description: string | null
+          digital_content: string | null
           id: string
           images: string[] | null
           is_active: boolean
+          is_digital: boolean
           name: string
           partner_company_id: string
           price: number
+          stock: number | null
           updated_at: string
         }
         Insert: {
           allow_cod?: boolean
           created_at?: string
           description?: string | null
+          digital_content?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
+          is_digital?: boolean
           name: string
           partner_company_id: string
           price?: number
+          stock?: number | null
           updated_at?: string
         }
         Update: {
           allow_cod?: boolean
           created_at?: string
           description?: string | null
+          digital_content?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
+          is_digital?: boolean
           name?: string
           partner_company_id?: string
           price?: number
+          stock?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -744,6 +753,57 @@ export type Database = {
           name?: string
           payment_link?: string | null
           type?: string
+        }
+        Relationships: []
+      }
+      product_purchases: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_country: string | null
+          delivery_phone: string | null
+          digital_content: string | null
+          id: string
+          is_digital: boolean
+          partner_company_id: string
+          product_id: string
+          product_name: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_country?: string | null
+          delivery_phone?: string | null
+          digital_content?: string | null
+          id?: string
+          is_digital?: boolean
+          partner_company_id: string
+          product_id: string
+          product_name: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_country?: string | null
+          delivery_phone?: string | null
+          digital_content?: string | null
+          id?: string
+          is_digital?: boolean
+          partner_company_id?: string
+          product_id?: string
+          product_name?: string
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1135,6 +1195,10 @@ export type Database = {
         Returns: boolean
       }
       process_mandate_commissions: { Args: never; Returns: number }
+      purchase_partner_product: {
+        Args: { _delivery?: Json; _product_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "user"
