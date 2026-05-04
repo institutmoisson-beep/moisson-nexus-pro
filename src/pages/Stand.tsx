@@ -881,19 +881,28 @@ const StandPage = () => {
 
                   {/* Delivery form */}
                   <form onSubmit={handleBuy} className="space-y-3">
-                    <p className="text-sm font-medium text-foreground font-body flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-primary" /> Adresse de livraison
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input placeholder="Pays" value={deliveryForm.country} onChange={e => setDeliveryForm({...deliveryForm, country: e.target.value})}
-                        className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm col-span-2" />
-                      <input placeholder="Ville" value={deliveryForm.city} onChange={e => setDeliveryForm({...deliveryForm, city: e.target.value})}
-                        className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
-                      <input placeholder="Quartier / Rue" value={deliveryForm.street} onChange={e => setDeliveryForm({...deliveryForm, street: e.target.value})}
-                        className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
-                    </div>
-                    <input placeholder="Contact téléphone *" required value={deliveryForm.phone} onChange={e => setDeliveryForm({...deliveryForm, phone: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
+                    {isDigitalBuy ? (
+                      <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 text-xs font-body text-foreground flex items-start gap-2">
+                        <span className="text-lg">🌐</span>
+                        <span>Produit numérique — livraison <b>instantanée</b> après paiement. Aucune adresse requise.</span>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-foreground font-body flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-primary" /> Adresse de livraison
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input placeholder="Pays" value={deliveryForm.country} onChange={e => setDeliveryForm({...deliveryForm, country: e.target.value})}
+                            className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm col-span-2" />
+                          <input placeholder="Ville" value={deliveryForm.city} onChange={e => setDeliveryForm({...deliveryForm, city: e.target.value})}
+                            className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
+                          <input placeholder="Quartier / Rue" value={deliveryForm.street} onChange={e => setDeliveryForm({...deliveryForm, street: e.target.value})}
+                            className="px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
+                        </div>
+                        <input placeholder="Contact téléphone *" required value={deliveryForm.phone} onChange={e => setDeliveryForm({...deliveryForm, phone: e.target.value})}
+                          className="w-full px-4 py-3 rounded-xl border border-input bg-background text-foreground font-body text-sm" />
+                      </>
+                    )}
 
                     {!canPayWallet && !canPayMSN && !canCOD && (
                       <div className="flex items-center gap-2 text-destructive text-xs font-body bg-destructive/5 border border-destructive/20 rounded-xl p-3">
