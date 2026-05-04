@@ -38,6 +38,7 @@ const StandPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [purchaseDone, setPurchaseDone] = useState(false);
+  const [digitalDelivery, setDigitalDelivery] = useState<string | null>(null);
 
   // MSN / exchange rate state
   const [msnCoins, setMsnCoins] = useState(0);
