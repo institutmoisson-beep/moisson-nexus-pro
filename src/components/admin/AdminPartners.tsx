@@ -12,7 +12,7 @@ const AdminPartners = () => {
   const [form, setForm] = useState({ name: "", description: "", website: "", whatsapp: "", facebook: "", email: "", phone: "" });
   const [logoImages, setLogoImages] = useState<string[]>([]);
   const [bannerImages, setBannerImages] = useState<string[]>([]);
-  const [productForm, setProductForm] = useState({ name: "", description: "", price: "", allow_cod: false });
+  const [productForm, setProductForm] = useState({ name: "", description: "", price: "", allow_cod: false, is_digital: false, digital_content: "", stock: "" });
   const [productImages, setProductImages] = useState<string[]>([]);
   const [products, setProducts] = useState<any[]>([]);
 
