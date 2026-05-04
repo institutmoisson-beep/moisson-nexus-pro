@@ -141,13 +141,15 @@ const AdminPartners = () => {
                   {p.description && <p className="text-xs text-muted-foreground font-body line-clamp-1">{p.description}</p>}
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 items-center flex-wrap justify-end">
+                <button onClick={() => setShowProductForm(showProductForm === p.id ? null : p.id)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gold/15 text-gold-foreground hover:bg-gold/25 text-xs font-body font-semibold border border-gold/30"
+                  title="Ajouter un produit achetable au portefeuille">
+                  <Package className="w-3.5 h-3.5" />
+                  {showProductForm === p.id ? "Fermer" : "+ Produit"}
+                </button>
                 <button onClick={() => startEdit(p)} className="p-1.5 text-primary hover:bg-primary/10 rounded" title="Modifier">
                   <Edit className="w-4 h-4" />
-                </button>
-                <button onClick={() => setShowProductForm(showProductForm === p.id ? null : p.id)}
-                  className="p-1.5 text-primary hover:bg-primary/10 rounded" title="Ajouter un produit">
-                  <Package className="w-4 h-4" />
                 </button>
                 <button onClick={() => deletePartner(p.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded">
                   <Trash2 className="w-4 h-4" />
