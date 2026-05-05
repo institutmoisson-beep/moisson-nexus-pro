@@ -235,20 +235,48 @@ const StandPage = () => {
           }
         } else if (paymentMode === "msn") {
           await deductMSNCoins(coins);
+          await supabase.from("product_purchases").insert({
+            user_id: user.id,
+            product_id: buyItem.id,
+            partner_company_id: buyItem.partner_company_id,
+            product_name: buyItem.name,
+            amount_paid: price,
+            is_digital: !!buyItem.is_digital,
+            digital_content: buyItem.is_digital ? buyItem.digital_content : null,
+            delivery_address: deliveryForm.address,
+            delivery_city: deliveryForm.city,
+            delivery_country: deliveryForm.country,
+            delivery_phone: deliveryForm.phone,
+            status: buyItem.is_digital ? "delivered" : "pending_delivery",
+          });
           await supabase.from("transactions").insert({
             user_id: user.id, amount: price, type: "product_purchase" as const, status: "approved" as const,
             description: `Achat produit "${buyItem.name}" avec ${coins} MSN Coins`,
-            metadata: { coins_used: coins },
+            metadata: { coins_used: coins, product_id: buyItem.id },
             processed_at: new Date().toISOString(),
           });
           if (buyItem.is_digital && buyItem.digital_content) {
             setDigitalDelivery(buyItem.digital_content);
           }
         } else {
-          // COD
+          // COD - paiement à la livraison
+          await supabase.from("product_purchases").insert({
+            user_id: user.id,
+            product_id: buyItem.id,
+            partner_company_id: buyItem.partner_company_id,
+            product_name: buyItem.name,
+            amount_paid: price,
+            is_digital: false,
+            delivery_address: deliveryForm.address,
+            delivery_city: deliveryForm.city,
+            delivery_country: deliveryForm.country,
+            delivery_phone: deliveryForm.phone,
+            status: "pending_delivery",
+          });
           await supabase.from("transactions").insert({
             user_id: user.id, amount: price, type: "product_purchase" as const, status: "pending" as const,
             description: `Produit COD: ${buyItem.name}`,
+            metadata: { product_id: buyItem.id, payment: "cod" },
           });
         }
       }
