@@ -490,6 +490,8 @@ export type Database = {
           pack_id: string
           status: string
           user_id: string
+          user_note: string | null
+          user_rating: number | null
         }
         Insert: {
           amount_paid: number
@@ -504,6 +506,8 @@ export type Database = {
           pack_id: string
           status?: string
           user_id: string
+          user_note?: string | null
+          user_rating?: number | null
         }
         Update: {
           amount_paid?: number
@@ -518,6 +522,8 @@ export type Database = {
           pack_id?: string
           status?: string
           user_id?: string
+          user_note?: string | null
+          user_rating?: number | null
         }
         Relationships: [
           {
@@ -771,7 +777,10 @@ export type Database = {
           product_id: string
           product_name: string
           status: string
+          updated_at: string
           user_id: string
+          user_note: string | null
+          user_rating: number | null
         }
         Insert: {
           amount_paid: number
@@ -787,7 +796,10 @@ export type Database = {
           product_id: string
           product_name: string
           status?: string
+          updated_at?: string
           user_id: string
+          user_note?: string | null
+          user_rating?: number | null
         }
         Update: {
           amount_paid?: number
@@ -803,7 +815,10 @@ export type Database = {
           product_id?: string
           product_name?: string
           status?: string
+          updated_at?: string
           user_id?: string
+          user_note?: string | null
+          user_rating?: number | null
         }
         Relationships: []
       }
