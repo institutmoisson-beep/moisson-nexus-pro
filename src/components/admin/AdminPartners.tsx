@@ -181,7 +181,7 @@ const AdminPartners = () => {
 
             {showProductForm === p.id && (
               <div className="border border-border rounded-lg p-3 mb-3 space-y-2 bg-secondary/30">
-                <p className="text-xs font-semibold text-foreground font-body">Ajouter un produit</p>
+                <p className="text-xs font-semibold text-foreground font-body">{editProduct ? "Modifier le produit" : "Ajouter un produit"}</p>
                 <input placeholder="Nom du produit" value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})}
                   className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
                 <input placeholder="Prix (FCFA)" type="number" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})}
@@ -204,7 +204,13 @@ const AdminPartners = () => {
                     className="w-full px-3 py-2 rounded-lg border border-input bg-background text-foreground font-body text-sm" rows={2} />
                 )}
                 <ImageUploader folder="products" images={productImages} onChange={setProductImages} max={6} label="Images du produit" />
-                <button onClick={handleCreateProduct} className="btn-gold !text-xs !py-1.5">Ajouter le produit</button>
+                <div className="flex gap-2">
+                  <button onClick={handleSaveProduct} className="btn-gold !text-xs !py-1.5">{editProduct ? "Enregistrer" : "Ajouter le produit"}</button>
+                  {editProduct && (
+                    <button onClick={() => { setShowProductForm(null); setEditProduct(null); setProductForm({ name: "", description: "", price: "", allow_cod: false, is_digital: false, digital_content: "", stock: "" }); setProductImages([]); }}
+                      className="px-3 py-1.5 rounded-lg border border-input text-muted-foreground font-body text-xs">Annuler</button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -217,6 +223,12 @@ const AdminPartners = () => {
                     <span className="text-foreground flex-1">{prod.name}</span>
                     <span className="text-primary font-semibold">{Number(prod.price).toLocaleString("fr-FR")} FCFA</span>
                     {prod.allow_cod && <span className="text-xs bg-harvest-green/20 text-harvest-green px-1.5 py-0.5 rounded">COD</span>}
+                    <button onClick={() => startEditProduct(prod)} className="p-1 text-primary hover:bg-primary/10 rounded" title="Modifier">
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => deleteProduct(prod.id)} className="p-1 text-destructive hover:bg-destructive/10 rounded" title="Supprimer">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
