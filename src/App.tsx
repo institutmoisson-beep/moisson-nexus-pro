@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, Component, ReactNode } from "react";
 import InstallPWA from "@/components/InstallPWA";
 
 // ── Lazy loading de toutes les pages ─────────────────────────────────────────
@@ -32,8 +32,6 @@ const ZoneUrgentCases   = lazy(() => import("./pages/ZoneUrgentCases"));
 const CommunityFund     = lazy(() => import("./pages/CommunityFund"));
 const NotFound          = lazy(() => import("./pages/NotFound"));
 
-
-
 // ── QueryClient optimisé ──────────────────────────────────────────────────────
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +55,60 @@ const PageLoader = () => (
   </div>
 );
 
+// ── Error Boundary ────────────────────────────────────────────────────────────
+// Capture les erreurs de rendu silencieuses qui causent la page blanche
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[ErrorBoundary] Erreur capturée :", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background px-4">
+          <div className="text-center max-w-md">
+            <div className="text-5xl mb-4">⚠️</div>
+            <h1 className="text-2xl font-heading font-bold text-foreground mb-2">
+              Une erreur est survenue
+            </h1>
+            <p className="text-muted-foreground font-body mb-2 text-sm">
+              {this.state.error?.message || "Erreur inattendue"}
+            </p>
+            <p className="text-xs text-muted-foreground font-body mb-6">
+              Consultez la console pour plus de détails.
+            </p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.href = "/";
+              }}
+              className="btn-hero !text-sm !py-2.5 !px-6"
+            >
+              Retourner à l'accueil
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -66,33 +118,38 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <InstallPWA />
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/"                     element={<Index />} />
-              <Route path="/connexion"            element={<Login />} />
-              <Route path="/inscription"          element={<Register />} />
-              <Route path="/dashboard"            element={<Dashboard />} />
-              <Route path="/portefeuille"         element={<Wallet />} />
-              <Route path="/msn-wallet"           element={<MSNWallet />} />
-              <Route path="/packs"                element={<Packs />} />
-              <Route path="/packs/:id"            element={<PackDetail />} />
-              <Route path="/commandes"            element={<Orders />} />
-              <Route path="/reseau"               element={<Network />} />
-              <Route path="/profil"               element={<Profile />} />
-              <Route path="/partenaires"          element={<Partners />} />
-              <Route path="/admin"                element={<AdminDashboard />} />
-              <Route path="/moissonneurs-pros"    element={<MoissonneursPros />} />
-              <Route path="/stand"                element={<Stand />} />
-              <Route path="/vente-mandat"         element={<MandateMarketplace />} />
-              <Route path="/moissonneur-pays"     element={<MoissonneurPays />} />
-              <Route path="/moissonneur-ville"    element={<MoissonneurVille />} />
-              <Route path="/porteur-affaires"     element={<PorteurAffaires />} />
-              <Route path="/cas-urgents"          element={<UrgentCases />} />
-              <Route path="/cas-urgents-zone"     element={<ZoneUrgentCases />} />
-              <Route path="/fond-communautaire"   element={<CommunityFund />} />
-              <Route path="*"                     element={<NotFound />} />
-            </Routes>
-          </Suspense>
+          {/* ErrorBoundary wraps Suspense pour capturer les erreurs de rendu
+              des composants enfants (HeroSection, FeaturesSection, etc.)
+              qui causaient la page blanche sur "/" */}
+          <ErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/"                     element={<Index />} />
+                <Route path="/connexion"            element={<Login />} />
+                <Route path="/inscription"          element={<Register />} />
+                <Route path="/dashboard"            element={<Dashboard />} />
+                <Route path="/portefeuille"         element={<Wallet />} />
+                <Route path="/msn-wallet"           element={<MSNWallet />} />
+                <Route path="/packs"                element={<Packs />} />
+                <Route path="/packs/:id"            element={<PackDetail />} />
+                <Route path="/commandes"            element={<Orders />} />
+                <Route path="/reseau"               element={<Network />} />
+                <Route path="/profil"               element={<Profile />} />
+                <Route path="/partenaires"          element={<Partners />} />
+                <Route path="/admin"                element={<AdminDashboard />} />
+                <Route path="/moissonneurs-pros"    element={<MoissonneursPros />} />
+                <Route path="/stand"                element={<Stand />} />
+                <Route path="/vente-mandat"         element={<MandateMarketplace />} />
+                <Route path="/moissonneur-pays"     element={<MoissonneurPays />} />
+                <Route path="/moissonneur-ville"    element={<MoissonneurVille />} />
+                <Route path="/porteur-affaires"     element={<PorteurAffaires />} />
+                <Route path="/cas-urgents"          element={<UrgentCases />} />
+                <Route path="/cas-urgents-zone"     element={<ZoneUrgentCases />} />
+                <Route path="/fond-communautaire"   element={<CommunityFund />} />
+                <Route path="*"                     element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
