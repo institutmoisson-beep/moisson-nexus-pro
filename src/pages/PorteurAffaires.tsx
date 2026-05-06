@@ -43,14 +43,18 @@ const PorteurAffairesPage = () => {
   useEffect(() => { if (user) loadAll(); }, [user]);
 
   const loadAll = async () => {
-    const [profileRes, packsRes, ordersRes, cfgRes] = await Promise.all([
+    const [profileRes, packsRes, partnerProdRes, ordersRes, cfgRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
       supabase.from("packs").select("id, name, price").eq("is_active", true),
+      supabase.from("partner_products").select("id, name, price, partner_company_id").eq("is_active", true),
       (supabase as any).from("business_orders").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }),
       supabase.from("mlm_config").select("*").eq("key", "business_bonus_percent").single(),
     ]);
     setProfile(profileRes.data);
-    setPacks(packsRes.data || []);
+    const partnerProducts = (partnerProdRes.data || []).map((pp: any) => ({
+      id: `pp:${pp.id}`, name: `🛍️ ${pp.name}`, price: pp.price,
+    }));
+    setPacks([...(packsRes.data || []), ...partnerProducts]);
     const orders = ordersRes.data || [];
     setMyOrders(orders);
     setBonusPercent(Number((cfgRes.data as any)?.value) || 3);
