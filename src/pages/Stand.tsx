@@ -757,6 +757,148 @@ const StandPage = () => {
         </div>
       )}
 
+      {/* ══ PRODUCT DETAIL MODAL ══ */}
+      {viewProduct && (() => {
+        const imgs: string[] = (viewProduct.images && viewProduct.images.length > 0) ? viewProduct.images : [];
+        const prodCoins = coinsNeededFor(Number(viewProduct.price));
+        const canCoin = msnCoins >= prodCoins;
+        const canWallet = (profile?.wallet_balance || 0) >= Number(viewProduct.price);
+        const inStock = viewProduct.stock === null || viewProduct.stock === undefined || viewProduct.stock > 0;
+        return (
+          <div
+            className="fixed inset-0 z-[55] flex items-end md:items-center justify-center p-0 md:p-4"
+            style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}
+            onClick={() => setViewProduct(null)}
+          >
+            <div
+              className="bg-card w-full md:max-w-2xl max-h-[95vh] md:rounded-3xl rounded-t-3xl overflow-hidden flex flex-col shadow-2xl border border-border"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Image carousel */}
+              <div className="relative h-72 md:h-96 bg-secondary/50 flex-shrink-0">
+                {imgs.length > 0 ? (
+                  <>
+                    <img src={imgs[productImageIndex]} alt={viewProduct.name} className="w-full h-full object-contain" />
+                    {imgs.length > 1 && (
+                      <>
+                        <button onClick={() => setProductImageIndex(i => (i - 1 + imgs.length) % imgs.length)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full hover:bg-black/70">
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <button onClick={() => setProductImageIndex(i => (i + 1) % imgs.length)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black/50 text-white rounded-full hover:bg-black/70">
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                          {imgs.map((_, i) => (
+                            <button key={i} onClick={() => setProductImageIndex(i)}
+                              className={`w-2 h-2 rounded-full transition-all ${i === productImageIndex ? "bg-white w-6" : "bg-white/50"}`} />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center"><Package className="w-20 h-20 text-muted-foreground/50" /></div>
+                )}
+                <button onClick={() => setViewProduct(null)}
+                  className="absolute top-4 right-4 w-9 h-9 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-black/80 z-10">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Thumbnails */}
+              {imgs.length > 1 && (
+                <div className="px-4 py-3 flex gap-2 overflow-x-auto border-b border-border bg-secondary/30">
+                  {imgs.map((img, i) => (
+                    <button key={i} onClick={() => setProductImageIndex(i)}
+                      className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${i === productImageIndex ? "border-primary" : "border-transparent opacity-60"}`}>
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div>
+                  <h2 className="text-2xl font-heading font-bold text-foreground mb-2">{viewProduct.name}</h2>
+                  <div className="flex items-baseline gap-3 flex-wrap">
+                    <span className="text-3xl font-heading font-bold text-primary">{Number(viewProduct.price).toLocaleString("fr-FR")} FCFA</span>
+                    {displayCurrency !== "XOF" && (
+                      <span className="text-sm text-muted-foreground font-body">≈ {formatAmt(priceInCurrency(Number(viewProduct.price), displayCurrency), displayCurrency)} {sym(displayCurrency)}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap text-xs font-body">
+                    <span className="flex items-center gap-1 text-gold bg-gold/10 px-2 py-1 rounded-full">
+                      <Flame className="w-3 h-3" /> {prodCoins} MSN Coins
+                    </span>
+                    {viewProduct.is_digital && (
+                      <span className="flex items-center gap-1 text-primary bg-primary/10 px-2 py-1 rounded-full font-semibold">
+                        🌐 Produit numérique
+                      </span>
+                    )}
+                    {viewProduct.allow_cod && !viewProduct.is_digital && (
+                      <span className="flex items-center gap-1 text-harvest-green bg-harvest-green/10 px-2 py-1 rounded-full">
+                        <Truck className="w-3 h-3" /> Paiement à la livraison
+                      </span>
+                    )}
+                    {viewProduct.stock !== null && viewProduct.stock !== undefined && (
+                      <span className={`px-2 py-1 rounded-full font-semibold ${viewProduct.stock > 0 ? "bg-secondary text-foreground" : "bg-destructive/10 text-destructive"}`}>
+                        {viewProduct.stock > 0 ? `Stock: ${viewProduct.stock} disponible(s)` : "Rupture de stock"}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {viewProduct.description && (
+                  <div className="border-t border-border pt-4">
+                    <h3 className="text-sm font-heading font-bold text-foreground mb-2 uppercase tracking-wider">Description</h3>
+                    <p className="text-sm text-foreground font-body leading-relaxed whitespace-pre-wrap">{viewProduct.description}</p>
+                  </div>
+                )}
+
+                {selectedPartner && (
+                  <div className="border-t border-border pt-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-secondary border border-border flex-shrink-0">
+                      {selectedPartner.logo_url ? (
+                        <img src={selectedPartner.logo_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                          <span className="text-sm font-bold text-primary">{selectedPartner.name.charAt(0)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground font-body">Vendu par</p>
+                      <p className="text-sm font-heading font-semibold text-foreground">{selectedPartner.name}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Buy footer */}
+              <div className="border-t border-border p-4 bg-card">
+                {user ? (
+                  <button
+                    onClick={() => { openBuy(viewProduct, "product"); setViewProduct(null); }}
+                    disabled={!inStock || (!canWallet && !canCoin && !viewProduct.allow_cod)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold font-body hover:bg-primary/90 transition-colors disabled:opacity-40"
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                    {!inStock ? "Rupture de stock" : (!canWallet && !canCoin && !viewProduct.allow_cod) ? "Solde insuffisant" : "Acheter maintenant"}
+                  </button>
+                ) : (
+                  <Link to="/connexion" className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold font-body">
+                    Se connecter pour acheter
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ══ BUY MODAL ══ */}
       {buyItem && profile && (
         <div className="fixed inset-0 bg-foreground/60 flex items-end md:items-center justify-center z-[60] p-0 md:p-4 backdrop-blur-sm"
