@@ -39,6 +39,8 @@ const StandPage = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [purchaseDone, setPurchaseDone] = useState(false);
   const [digitalDelivery, setDigitalDelivery] = useState<string | null>(null);
+  const [viewProduct, setViewProduct] = useState<any>(null);
+  const [productImageIndex, setProductImageIndex] = useState(0);
 
   // MSN / exchange rate state
   const [msnCoins, setMsnCoins] = useState(0);
