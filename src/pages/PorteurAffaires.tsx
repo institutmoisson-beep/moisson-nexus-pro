@@ -104,20 +104,21 @@ const PorteurAffairesPage = () => {
     }
     setSubmitting(true);
     const packName = packs.find(p => p.id === form.pack_id)?.name || form.product_description;
+    const isPartnerProduct = form.pack_id.startsWith("pp:");
     const { error } = await (supabase as any).from("business_orders").insert({
       user_id: user!.id,
       customer_name: form.customer_name,
       customer_phone: form.customer_phone,
       delivery_address: form.delivery_address,
       product_description: packName || form.product_description,
-      pack_id: form.pack_id || null,
+      pack_id: isPartnerProduct || !form.pack_id ? null : form.pack_id,
       quantity: Number(form.quantity) || 1,
       total_amount: Number(form.total_amount),
       status: "pending",
       bonus_percent: bonusPercent,
       bonus_amount: 0,
       bonus_paid: false,
-      notes: form.notes || null,
+      notes: (isPartnerProduct ? `[Produit partenaire id=${form.pack_id.slice(3)}] ` : "") + (form.notes || ""),
     });
     setSubmitting(false);
     if (error) { toast.error("Erreur: " + error.message); return; }
