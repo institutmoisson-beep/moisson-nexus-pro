@@ -9,6 +9,7 @@ const AdminPartners = () => {
   const [showForm, setShowForm] = useState(false);
   const [editPartner, setEditPartner] = useState<any>(null);
   const [showProductForm, setShowProductForm] = useState<string | null>(null);
+  const [editProduct, setEditProduct] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", website: "", whatsapp: "", facebook: "", email: "", phone: "" });
   const [logoImages, setLogoImages] = useState<string[]>([]);
   const [bannerImages, setBannerImages] = useState<string[]>([]);
@@ -63,21 +64,42 @@ const AdminPartners = () => {
     setShowForm(false); resetForm(); loadData();
   };
 
-  const handleCreateProduct = async () => {
+  const handleSaveProduct = async () => {
     if (!productForm.name || !productForm.price || !showProductForm) { toast.error("Nom et prix requis"); return; }
-    const { error } = await supabase.from("partner_products").insert({
+    const data = {
       partner_company_id: showProductForm, name: productForm.name,
       description: productForm.description, price: Number(productForm.price),
       allow_cod: productForm.allow_cod, images: productImages,
       is_digital: productForm.is_digital,
       digital_content: productForm.is_digital ? productForm.digital_content : null,
       stock: productForm.stock ? Number(productForm.stock) : null,
-    } as any);
+    };
+    const { error } = editProduct
+      ? await supabase.from("partner_products").update(data).eq("id", editProduct.id)
+      : await supabase.from("partner_products").insert(data as any);
     if (error) { toast.error("Erreur: " + error.message); return; }
-    toast.success("Produit ajouté !");
-    setShowProductForm(null);
+    toast.success(editProduct ? "Produit modifié !" : "Produit ajouté !");
+    setShowProductForm(null); setEditProduct(null);
     setProductForm({ name: "", description: "", price: "", allow_cod: false, is_digital: false, digital_content: "", stock: "" });
     setProductImages([]); loadData();
+  };
+
+  const startEditProduct = (prod: any) => {
+    setEditProduct(prod);
+    setShowProductForm(prod.partner_company_id);
+    setProductForm({
+      name: prod.name, description: prod.description || "", price: String(prod.price),
+      allow_cod: !!prod.allow_cod, is_digital: !!prod.is_digital,
+      digital_content: prod.digital_content || "", stock: prod.stock != null ? String(prod.stock) : "",
+    });
+    setProductImages(prod.images || []);
+  };
+
+  const deleteProduct = async (id: string) => {
+    if (!confirm("Supprimer définitivement ce produit ?")) return;
+    const { error } = await supabase.from("partner_products").delete().eq("id", id);
+    if (error) { toast.error("Erreur: " + error.message); return; }
+    toast.success("Produit supprimé"); loadData();
   };
 
   const deletePartner = async (id: string) => {
