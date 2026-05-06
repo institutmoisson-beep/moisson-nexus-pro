@@ -664,7 +664,11 @@ const StandPage = () => {
                         const canWallet = (profile?.wallet_balance || 0) >= Number(prod.price);
                         const canCoin = msnCoins >= prodCoins;
                         return (
-                          <div key={prod.id} className="rounded-2xl border border-border bg-secondary/30 overflow-hidden hover:border-primary/30 transition-colors">
+                          <div
+                            key={prod.id}
+                            onClick={() => { setViewProduct(prod); setProductImageIndex(0); }}
+                            className="rounded-2xl border border-border bg-secondary/30 overflow-hidden hover:border-primary/30 hover:shadow-md transition-all cursor-pointer"
+                          >
                             <div className="flex gap-4 p-4">
                               <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0 border border-border">
                                 {prod.images?.[0] ? (
@@ -704,19 +708,27 @@ const StandPage = () => {
                                     )}
                                   </div>
                                 </div>
-                                {user ? (
+                                <div className="flex items-center gap-2 mt-2">
                                   <button
-                                    onClick={() => openBuy(prod, "product")}
-                                    disabled={!canWallet && !canCoin && !prod.allow_cod}
-                                    className="mt-2 flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold font-body hover:bg-primary/90 transition-colors disabled:opacity-40"
+                                    onClick={(e) => { e.stopPropagation(); setViewProduct(prod); setProductImageIndex(0); }}
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-card text-foreground text-sm font-semibold font-body hover:bg-secondary transition-colors"
                                   >
-                                    <ShoppingCart className="w-4 h-4" /> Acheter
+                                    <Info className="w-4 h-4" /> Détails
                                   </button>
-                                ) : (
-                                  <Link to="/connexion" className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground text-sm font-semibold font-body">
-                                    Se connecter
-                                  </Link>
-                                )}
+                                  {user ? (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); openBuy(prod, "product"); }}
+                                      disabled={!canWallet && !canCoin && !prod.allow_cod}
+                                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold font-body hover:bg-primary/90 transition-colors disabled:opacity-40"
+                                    >
+                                      <ShoppingCart className="w-4 h-4" /> Acheter
+                                    </button>
+                                  ) : (
+                                    <Link to="/connexion" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground text-sm font-semibold font-body">
+                                      Se connecter
+                                    </Link>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             {prod.images?.length > 1 && (
