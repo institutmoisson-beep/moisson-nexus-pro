@@ -1,118 +1,109 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Package, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { getPacks, type Pack } from "@/lib/demo-data";
+import { Package, TrendingUp, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { generateCommissionLevels } from "@/lib/mlm-commission";
 
-const PacksPage = () => {
+const Packs = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<any>(null);
-  const [packs, setPacks] = useState<any[]>([]);
-  const [sectors, setSectors] = useState<any[]>([]);
-  const [selectedSector, setSelectedSector] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [packs, setPacks] = useState<Pack[]>([]);
+  const [expandedPack, setExpandedPack] = useState<string | null>(null);
 
-  useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
-  useEffect(() => { if (user) loadData(); }, [user]);
+  useEffect(() => {
+    if (!loading && !user) navigate("/connexion");
+  }, [user, loading, navigate]);
 
-  const loadData = async () => {
-    const [profileRes, packsRes, sectorsRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
-      supabase.from("packs").select("*, partner_companies(name)").eq("is_active", true),
-      supabase.from("pack_sectors").select("*").eq("is_active", true),
-    ]);
-    setProfile(profileRes.data);
-    setPacks(packsRes.data || []);
-    setSectors(sectorsRes.data || []);
+  useEffect(() => {
+    setPacks(getPacks().filter(p => p.is_active));
+  }, []);
+
+  const getCommissionLevels = (pack: Pack) => {
+    return generateCommissionLevels(pack.benefit, pack.level1_commission_percent, pack.decay_factor, pack.min_commission);
   };
 
-  const filteredPacks = packs.filter(p => {
-    const matchSector = !selectedSector || p.sector_id === selectedSector;
-    const q = searchQuery.toLowerCase();
-    const matchSearch = !q || p.name.toLowerCase().includes(q) ||
-      (p.description || "").toLowerCase().includes(q) ||
-      (p.partner_companies?.name || "").toLowerCase().includes(q);
-    return matchSector && matchSearch;
-  });
-
-  if (loading || !profile) {
+  if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-muted-foreground font-body">Chargement...</div></div>;
   }
 
   return (
     <DashboardLayout>
       <h1 className="text-3xl font-heading font-bold text-foreground mb-2">📦 Packs d'activation</h1>
-      <p className="text-muted-foreground font-body mb-6">
-        Solde: <span className="font-bold text-primary">{Number(profile.wallet_balance).toLocaleString("fr-FR")} FCFA</span>
-        {profile.is_mlm_active && <span className="ml-2 text-xs bg-harvest-green/20 text-harvest-green px-2 py-1 rounded-full">MLM Actif ✓</span>}
-      </p>
+      <p className="text-muted-foreground font-body mb-8">Choisissez un pack pour activer votre compte MLM.</p>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input placeholder="Rechercher par nom ou entreprise..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-input bg-background text-foreground font-body text-sm" />
+      <div className="bg-linear-to-r from-primary/5 to-gold/5 border border-primary/10 rounded-xl p-5 mb-8">
+        <h2 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-primary" /> Comment fonctionnent les commissions ?
+        </h2>
+        <p className="text-sm text-muted-foreground font-body">
+          Les commissions sont calculées sur le <strong className="text-gold">bénéfice du pack</strong> et sont <strong className="text-harvest-green">décroissantes</strong> jusqu'à l'infini.
+        </p>
+      </div>
+
+      {packs.length === 0 ? (
+        <div className="text-center py-20">
+          <Package className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+          <p className="text-muted-foreground font-body">Aucun pack disponible.</p>
         </div>
-        <select value={selectedSector} onChange={e => setSelectedSector(e.target.value)}
-          className="px-3 py-2.5 rounded-lg border border-input bg-background text-foreground font-body text-sm">
-          <option value="">Tous les secteurs</option>
-          {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-      </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {packs.map((pack) => {
+            const levels = getCommissionLevels(pack);
+            const level1Commission = levels[0]?.amount || 0;
+            const isExpanded = expandedPack === pack.id;
 
-      {/* Pack Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPacks.map(pack => (
-          <PackCard key={pack.id} pack={pack} onClick={() => navigate(`/packs/${pack.id}`)} />
-        ))}
-        {filteredPacks.length === 0 && <p className="text-muted-foreground font-body col-span-3 text-center py-12">Aucun pack trouvé</p>}
-      </div>
+            return (
+              <div key={pack.id} className="card-elevated hover:shadow-lg transition-shadow">
+                <div className="mb-4">
+                  <h3 className="font-heading font-bold text-xl text-foreground mb-1">{pack.name}</h3>
+                  {pack.partner_companies?.name && <p className="text-xs text-muted-foreground font-body">par {pack.partner_companies.name}</p>}
+                </div>
+                <p className="text-3xl font-heading font-bold text-primary mb-2">{pack.price.toLocaleString("fr-FR")} FCFA</p>
+                {pack.description && <p className="text-sm text-muted-foreground font-body mb-4">{pack.description}</p>}
+
+                <div className="bg-harvest-green/10 border border-harvest-green/20 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-4 h-4 text-harvest-green" />
+                    <span className="text-sm font-body text-foreground font-semibold">Votre commission directe</span>
+                  </div>
+                  <p className="text-2xl font-heading font-bold text-harvest-green">{level1Commission.toLocaleString("fr-FR")} FCFA</p>
+                </div>
+
+                <button onClick={() => setExpandedPack(isExpanded ? null : pack.id)} className="w-full flex items-center justify-between py-2 text-sm font-body text-muted-foreground hover:text-foreground">
+                  <span>Voir les commissions ({levels.length} niveaux)</span>
+                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t border-border pt-4 mt-2">
+                    <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                      {levels.map((level) => (
+                        <div key={level.level} className="flex justify-between items-center text-sm font-body">
+                          <span className={level.level === 1 ? "text-foreground font-semibold" : "text-muted-foreground"}>Niveau {level.level}</span>
+                          <div className="text-right">
+                            <span className={level.level === 1 ? "font-semibold text-harvest-green" : "font-semibold text-foreground"}>{level.amount.toLocaleString("fr-FR")} FCFA</span>
+                            <span className="text-xs text-muted-foreground ml-2">({level.percentage}%)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bg-secondary/50 rounded-lg p-3 text-center">
+                      <p className="text-xs text-muted-foreground font-body">Total commissions possibles</p>
+                      <p className="font-heading font-bold text-gold">{levels.reduce((s, l) => s + l.amount, 0).toLocaleString("fr-FR")} FCFA</p>
+                    </div>
+                  </div>
+                )}
+
+                <button onClick={() => navigate(`/packs/${pack.id}`)} className="btn-hero w-full !text-sm !py-2.5 mt-4">Acheter ce pack →</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </DashboardLayout>
   );
 };
 
-const PackCard = ({ pack, onClick }: { pack: any; onClick: () => void }) => {
-  const [imgIndex, setImgIndex] = useState(0);
-  const images: string[] = pack.images || [];
-
-  return (
-    <div className="card-elevated flex flex-col cursor-pointer hover:shadow-lg transition-shadow" onClick={onClick}>
-      {images.length > 0 && (
-        <div className="relative mb-3 rounded-lg overflow-hidden bg-secondary aspect-video">
-          <img src={images[imgIndex]} alt={pack.name} className="w-full h-full object-cover" />
-          {images.length > 1 && (
-            <>
-              <button onClick={e => { e.stopPropagation(); setImgIndex((imgIndex - 1 + images.length) % images.length); }}
-                className="absolute left-1 top-1/2 -translate-y-1/2 p-1 bg-foreground/50 text-background rounded-full">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button onClick={e => { e.stopPropagation(); setImgIndex((imgIndex + 1) % images.length); }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 bg-foreground/50 text-background rounded-full">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </>
-          )}
-        </div>
-      )}
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h3 className="font-heading font-bold text-foreground text-lg">{pack.name}</h3>
-          {pack.partner_companies?.name && (
-            <p className="text-xs text-muted-foreground font-body">par {pack.partner_companies.name}</p>
-          )}
-        </div>
-        <Package className="w-6 h-6 text-primary shrink-0" />
-      </div>
-      <p className="text-2xl font-heading font-bold text-primary mb-2">{Number(pack.price).toLocaleString("fr-FR")} FCFA</p>
-      {pack.description && <p className="text-sm text-muted-foreground font-body mb-3 line-clamp-2">{pack.description}</p>}
-      <div className="mt-auto">
-        <span className="text-sm text-primary font-semibold font-body">Voir les détails →</span>
-      </div>
-    </div>
-  );
-};
-
-export default PacksPage;
+export default Packs;
