@@ -1,104 +1,71 @@
+import { ReactNode, useEffect, useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  LayoutDashboard, Wallet, Package, Users, User, Shield,
-  LogOut, Menu, X, UserCheck, Store, ShoppingBag, Briefcase,
-  Flame, HandshakeIcon, Globe, MapPin
+import { 
+  LayoutDashboard, Wallet, Package, Users, ShoppingCart, 
+  UserCircle, LogOut, Menu, X, Store, Truck, Box, Shield
 } from "lucide-react";
-import logo from "@/assets/logo-moisson.png";
 
-const NAV_ITEMS = [
-  { path: "/dashboard",         label: "Tableau de bord",        icon: LayoutDashboard },
-  { path: "/portefeuille",      label: "Portefeuille",           icon: Wallet },
-  { path: "/msn-wallet",        label: "MSN Coins 🔥",           icon: Flame },
-  { path: "/packs",             label: "Packs",                  icon: Package },
-  { path: "/vente-mandat",      label: "Vente Mandat 🏬",        icon: HandshakeIcon },
-  { path: "/porteur-affaires",  label: "🌾 Porteur d'Affaires",  icon: Briefcase },
-  { path: "/commandes",         label: "Commandes",              icon: ShoppingBag },
-  { path: "/reseau",            label: "Mon Réseau",             icon: Users },
-  { path: "/profil",            label: "Profil",                 icon: User },
-  { path: "/moissonneurs-pros", label: "Pros",                   icon: UserCheck },
-  { path: "/stand",             label: "Stand",                  icon: Store },
+const BASE_NAV = [
+  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/portefeuille", label: "Portefeuille", icon: Wallet },
+  { path: "/packs", label: "Packs", icon: Package },
+  { path: "/commandes", label: "Commandes", icon: ShoppingCart },
+  { path: "/reseau", label: "Réseau", icon: Users },
+  { path: "/produits-en-gros", label: "Produits en Gros", icon: Box },
+  { path: "/distribution", label: "Distribution", icon: Truck },
+  { path: "/stand", label: "Stand", icon: Store },
+  { path: "/profil", label: "Profil", icon: UserCircle },
 ];
 
-const STAFF_ROLE_LABELS: Record<string, string> = {
-  financier:      "Financier",
-  gestion_packs:  "Gestion Packs",
-  gestion_stand:  "Gestion Stand",
-  informaticien:  "Informaticien",
-  commercial:     "Commercial",
-  communication:  "Communication",
-};
-
-// Chemins avec couleur spéciale
-const SPECIAL_PATHS: Record<string, string> = {
-  "/msn-wallet":       "text-gold hover:bg-gold/10 hover:text-gold font-medium",
-  "/vente-mandat":     "text-harvest-green hover:bg-harvest-green/10 hover:text-harvest-green font-medium",
-  "/porteur-affaires": "text-primary hover:bg-primary/10 hover:text-primary font-medium",
-};
+const ADMIN_NAV = [
+  { path: "/admin", label: "Administration", icon: Shield },
+  { path: "/admin/packs", label: "Gestion Packs", icon: Package },
+  { path: "/admin/wholesale", label: "Produits en Gros", icon: Box },
+  { path: "/admin/distribution", label: "Distribution", icon: Truck },
+];
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
-  const { user, signOut, loading } = useAuth();
+  const { user, signOut, loading, getUserProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [staffRoles, setStaffRoles] = useState<string[]>([]);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [profile, setProfile] = useState<any>(null);
-  const [hasPaysRole, setHasPaysRole] = useState(false);
-  const [hasVilleRole, setHasVilleRole] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate("/connexion");
-  }, [user, loading]);
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     if (user) {
-      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data }) => setIsAdmin(!!data));
-      supabase.from("profiles").select("first_name, last_name").eq("user_id", user.id).single().then(({ data }) => setProfile(data));
-      supabase.from("staff_roles").select("role").eq("user_id", user.id).then(({ data }) => {
-        const roles = (data || []).map((r: any) => r.role);
-        setStaffRoles(roles);
-        setHasPaysRole(roles.includes("moissonneur_pays"));
-        setHasVilleRole(roles.includes("moissonneur_ville"));
-      });
+      setProfile(getUserProfile());
     }
-  }, [user]);
+  }, [user, getUserProfile, location.pathname]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  const getLinkClass = (path: string, isActive: boolean) => {
+  const isAdmin = profile?.role === "admin";
+  const navItems = isAdmin ? [...BASE_NAV, ...ADMIN_NAV] : BASE_NAV;
+
+  const getLinkClass = (_path: string, isActive: boolean) => {
     if (isActive) return "bg-primary text-primary-foreground font-semibold";
-    if (SPECIAL_PATHS[path]) return SPECIAL_PATHS[path];
     return "text-muted-foreground hover:bg-secondary hover:text-foreground";
   };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ── HEADER ── */}
-      <header className="border-b border-border bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileMenu(!mobileMenu)}
-              className="md:hidden p-1.5 rounded-lg hover:bg-secondary"
-            >
-              {mobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-            <Link to="/dashboard" className="flex items-center gap-2">
-              <img src={logo} alt="Institut Moisson" className="w-8 h-8" width={32} height={32} />
-              <span className="font-heading text-lg font-bold text-foreground hidden sm:inline">Institut Moisson</span>
-            </Link>
-          </div>
+      <header className="sticky top-0 z-30 bg-card/80 backdrop-blur-md border-b border-border">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2">
+            <img src="/images/logo-moisson.png" alt="Institut Moisson" className="w-8 h-8" width={32} height={32} />
+            <span className="font-heading text-lg font-bold text-foreground hidden sm:inline">Institut Moisson</span>
+          </Link>
 
-          {/* ── NAV DESKTOP ── */}
-          <nav className="hidden md:flex items-center gap-1">
-            {NAV_ITEMS.map(item => (
+          <nav className="hidden lg:flex items-center gap-1">
+            {navItems.map(item => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -107,55 +74,27 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 <item.icon className="w-4 h-4" /> {item.label}
               </Link>
             ))}
-
-            {isAdmin && (
-              <Link to="/admin"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-accent text-accent-foreground font-semibold hover:opacity-90 transition-colors">
-                <Shield className="w-4 h-4" /> Admin
-              </Link>
-            )}
-            {staffRoles.filter(r => !["moissonneur_pays","moissonneur_ville"].includes(r)).length > 0 && !isAdmin && (
-              <Link to="/admin"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-primary/10 text-primary font-semibold hover:bg-primary/20 transition-colors">
-                <Briefcase className="w-4 h-4" /> Gestion
-              </Link>
-            )}
-            {hasPaysRole && (
-              <Link to="/moissonneur-pays"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-blue-500/10 text-blue-600 font-semibold hover:bg-blue-500/20 transition-colors">
-                <Globe className="w-4 h-4" /> Mon Pays
-              </Link>
-            )}
-            {hasVilleRole && (
-              <Link to="/moissonneur-ville"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-amber-500/10 text-amber-600 font-semibold hover:bg-amber-500/20 transition-colors">
-                <MapPin className="w-4 h-4" /> Ma Ville
-              </Link>
-            )}
-            {(hasPaysRole || hasVilleRole) && (
-              <Link to="/cas-urgents-zone"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-body bg-red-500/10 text-red-600 font-semibold hover:bg-red-500/20 transition-colors">
-                🚨 Urgences
-              </Link>
-            )}
           </nav>
 
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground font-body hidden sm:inline">
+            <span className="text-sm font-body text-muted-foreground hidden md:inline">
               {profile?.first_name} {profile?.last_name}
+              {isAdmin && <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Admin</span>}
             </span>
-            <button onClick={handleSignOut} className="text-muted-foreground hover:text-foreground transition-colors">
-              <LogOut className="w-5 h-5" />
+            <button onClick={handleSignOut} className="p-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors" title="Déconnexion">
+              <LogOut className="w-4 h-4" />
+            </button>
+            <button onClick={() => setMobileMenu(!mobileMenu)} className="lg:hidden p-2 rounded-lg text-muted-foreground hover:bg-secondary">
+              {mobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </header>
 
-      {/* ── MENU MOBILE ── */}
       {mobileMenu && (
-        <div className="md:hidden border-b border-border bg-card">
-          <nav className="p-3 space-y-1">
-            {NAV_ITEMS.map(item => (
+        <div className="lg:hidden fixed inset-0 top-[57px] z-20 bg-card/95 backdrop-blur-md p-4 overflow-auto">
+          <nav className="space-y-1">
+            {navItems.map(item => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -165,49 +104,11 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 <item.icon className="w-4 h-4" /> {item.label}
               </Link>
             ))}
-
-            {isAdmin && (
-              <Link to="/admin" onClick={() => setMobileMenu(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-accent text-accent-foreground font-semibold">
-                <Shield className="w-4 h-4" /> Administration
-              </Link>
-            )}
-            {staffRoles.filter(r => !["moissonneur_pays","moissonneur_ville"].includes(r)).length > 0 && !isAdmin && (
-              <Link to="/admin" onClick={() => setMobileMenu(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-primary/10 text-primary font-semibold">
-                <Briefcase className="w-4 h-4" /> Gestion ({
-                  staffRoles
-                    .filter(r => !["moissonneur_pays","moissonneur_ville"].includes(r))
-                    .map(r => STAFF_ROLE_LABELS[r] || r)
-                    .join(", ")
-                })
-              </Link>
-            )}
-            {hasPaysRole && (
-              <Link to="/moissonneur-pays" onClick={() => setMobileMenu(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-blue-500/10 text-blue-600 font-semibold">
-                <Globe className="w-4 h-4" /> Moissonneur Pays
-              </Link>
-            )}
-            {hasVilleRole && (
-              <Link to="/moissonneur-ville" onClick={() => setMobileMenu(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-amber-500/10 text-amber-600 font-semibold">
-                <MapPin className="w-4 h-4" /> Moissonneur Ville
-              </Link>
-            )}
-            {(hasPaysRole || hasVilleRole) && (
-              <Link to="/cas-urgents-zone" onClick={() => setMobileMenu(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-body bg-red-500/10 text-red-600 font-semibold">
-                🚨 Cas Urgents zone
-              </Link>
-            )}
           </nav>
         </div>
       )}
 
-      {/* ── CONTENU ── */}
-      {/* pb-24 : marge basse pour que la bannière PWA fixe ne cache pas le contenu */}
-      <main className="container mx-auto px-4 md:px-6 py-6 md:py-8 pb-24">
+      <main className="container mx-auto px-4 py-6 pb-24">
         {children}
       </main>
     </div>
