@@ -7,6 +7,8 @@ export interface UserProfile {
   email: string;
   role?: string;
   wallet_balance?: number;
+  career_level?: string;
+  is_mlm_active?: boolean;
 }
 
 export interface Pack {
