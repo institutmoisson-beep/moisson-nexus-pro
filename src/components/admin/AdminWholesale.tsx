@@ -171,7 +171,7 @@ const AdminWholesale = () => {
           { label: "Propositions", value: proposals.filter(p => p.status === "pending").length, color: "text-gold" },
         ].map((s, i) => (
           <div key={i} className="card-elevated text-center p-4">
-            <p className={text-2xl font-heading font-bold ${s.color}}>{s.value}</p>
+            <p className={`text-2xl font-heading font-bold ${s.color}`}>{s.value}</p>
             <p className="text-xs text-muted-foreground font-body">{s.label}</p>
           </div>
         ))}
