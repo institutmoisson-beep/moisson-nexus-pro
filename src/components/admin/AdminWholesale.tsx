@@ -118,7 +118,7 @@ const AdminWholesale = () => {
       await (supabase as any).rpc("pay_wholesale_commission", { _order_id: orderId });
       toast.success("✅ Livraison confirmée + commission versée !");
     } else {
-      toast.success(Statut mis à jour : ${status});
+      toast.success(`Statut mis à jour : ${status}`);
     }
     loadAll();
   };
