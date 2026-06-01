@@ -136,6 +136,56 @@ export type Database = {
         }
         Relationships: []
       }
+      commissions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          level: number | null
+          paid_at: string | null
+          source_id: string | null
+          source_name: string | null
+          source_table: string | null
+          status: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          level?: number | null
+          paid_at?: string | null
+          source_id?: string | null
+          source_name?: string | null
+          source_table?: string | null
+          status?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          level?: number | null
+          paid_at?: string | null
+          source_id?: string | null
+          source_name?: string | null
+          source_table?: string | null
+          status?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_fund: {
         Row: {
           balance: number
@@ -151,6 +201,99 @@ export type Database = {
           balance?: number
           id?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      distribution_orders: {
+        Row: {
+          commission_amount: number | null
+          created_at: string | null
+          id: string
+          product_id: string
+          quantity: number
+          status: string | null
+          total_amount: number
+          unit_price: number
+          user_id: string
+        }
+        Insert: {
+          commission_amount?: number | null
+          created_at?: string | null
+          id?: string
+          product_id: string
+          quantity?: number
+          status?: string | null
+          total_amount?: number
+          unit_price?: number
+          user_id: string
+        }
+        Update: {
+          commission_amount?: number | null
+          created_at?: string | null
+          id?: string
+          product_id?: string
+          quantity?: number
+          status?: string | null
+          total_amount?: number
+          unit_price?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribution_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "distribution_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribution_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distribution_products: {
+        Row: {
+          category: string | null
+          commission_percent: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          images: Json | null
+          is_active: boolean | null
+          name: string
+          price: number
+          stock: number
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          commission_percent?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          name: string
+          price?: number
+          stock?: number
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          commission_percent?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          stock?: number
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -308,6 +451,70 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      mlm_nodes: {
+        Row: {
+          accumulated_pv_left: number | null
+          accumulated_pv_right: number | null
+          created_at: string | null
+          current_rank: string | null
+          id: string
+          parent_id: string | null
+          position: string | null
+          profile_id: string
+          sponsor_id: string | null
+          total_sales: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          accumulated_pv_left?: number | null
+          accumulated_pv_right?: number | null
+          created_at?: string | null
+          current_rank?: string | null
+          id?: string
+          parent_id?: string | null
+          position?: string | null
+          profile_id: string
+          sponsor_id?: string | null
+          total_sales?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          accumulated_pv_left?: number | null
+          accumulated_pv_right?: number | null
+          created_at?: string | null
+          current_rank?: string | null
+          id?: string
+          parent_id?: string | null
+          position?: string | null
+          profile_id?: string
+          sponsor_id?: string | null
+          total_sales?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mlm_nodes_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mlm_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mlm_nodes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mlm_nodes_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       msn_coins: {
         Row: {
@@ -561,47 +768,62 @@ export type Database = {
       }
       packs: {
         Row: {
+          benefit: number | null
           commission_percentage: number
           created_at: string
+          decay_factor: number | null
           description: string | null
           id: string
           images: string[] | null
           is_active: boolean
           is_mlm_pack: boolean
+          level1_commission_percent: number | null
+          min_commission: number | null
           name: string
           partner_company_id: string | null
           physical_prizes: string | null
           price: number
+          pv_value: number | null
           sector_id: string | null
           updated_at: string
         }
         Insert: {
+          benefit?: number | null
           commission_percentage?: number
           created_at?: string
+          decay_factor?: number | null
           description?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
           is_mlm_pack?: boolean
+          level1_commission_percent?: number | null
+          min_commission?: number | null
           name: string
           partner_company_id?: string | null
           physical_prizes?: string | null
           price: number
+          pv_value?: number | null
           sector_id?: string | null
           updated_at?: string
         }
         Update: {
+          benefit?: number | null
           commission_percentage?: number
           created_at?: string
+          decay_factor?: number | null
           description?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
           is_mlm_pack?: boolean
+          level1_commission_percent?: number | null
+          min_commission?: number | null
           name?: string
           partner_company_id?: string | null
           physical_prizes?: string | null
           price?: number
+          pv_value?: number | null
           sector_id?: string | null
           updated_at?: string
         }
@@ -1140,6 +1362,129 @@ export type Database = {
         }
         Relationships: []
       }
+      wholesale_orders: {
+        Row: {
+          agent_id: string | null
+          commission_amount: number | null
+          created_at: string | null
+          id: string
+          product_id: string
+          quantity: number
+          status: string | null
+          total_amount: number
+          unit_price: number
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          commission_amount?: number | null
+          created_at?: string | null
+          id?: string
+          product_id: string
+          quantity?: number
+          status?: string | null
+          total_amount?: number
+          unit_price?: number
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          commission_amount?: number | null
+          created_at?: string | null
+          id?: string
+          product_id?: string
+          quantity?: number
+          status?: string | null
+          total_amount?: number
+          unit_price?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wholesale_orders_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "wholesale_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wholesale_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wholesale_products: {
+        Row: {
+          bulk_price: number
+          category: string | null
+          commission_percent: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          images: Json | null
+          is_active: boolean | null
+          min_quantity: number
+          name: string
+          partner_id: string | null
+          partner_name: string | null
+          stock: number
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          bulk_price?: number
+          category?: string | null
+          commission_percent?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          min_quantity?: number
+          name: string
+          partner_id?: string | null
+          partner_name?: string | null
+          stock?: number
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          bulk_price?: number
+          category?: string | null
+          commission_percent?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          min_quantity?: number
+          name?: string
+          partner_id?: string | null
+          partner_name?: string | null
+          stock?: number
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wholesale_products_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       business_agent_leaderboard: {
@@ -1177,11 +1522,29 @@ export type Database = {
         Args: { _buyer_user_id: string; _order_id: string }
         Returns: undefined
       }
+      calculate_pack_commissions: {
+        Args: {
+          p_benefit: number
+          p_decay_factor: number
+          p_level1_percent: number
+          p_min_commission: number
+        }
+        Returns: {
+          amount: number
+          level: number
+          percentage: number
+        }[]
+      }
       can_access_urgent_case: {
         Args: { _case_id: string; _user_id: string }
         Returns: boolean
       }
+      check_binary_pairs: { Args: { p_node_id: string }; Returns: undefined }
       contribute_to_fund: { Args: { _amount: number }; Returns: Json }
+      distribute_binary_pv: {
+        Args: { p_purchaser_profile_id: string; p_pv_amount: number }
+        Returns: undefined
+      }
       distribute_commissions:
         | {
             Args: {
@@ -1201,7 +1564,37 @@ export type Database = {
             }
             Returns: undefined
           }
+      distribute_matching_bonus: {
+        Args: { p_earned_amount: number; p_earner_id: string }
+        Returns: undefined
+      }
+      distribute_mlm_commissions: {
+        Args: { p_order_id: string; p_pack_id: string; p_purchaser_id: string }
+        Returns: {
+          amount: number
+          level: number
+          recipient_id: string
+          status: string
+        }[]
+      }
       generate_referral_code: { Args: never; Returns: string }
+      get_sponsor_at_level: {
+        Args: { p_profile_id: string; p_target_level: number }
+        Returns: string
+      }
+      get_user_network: {
+        Args: { p_user_id: string }
+        Returns: {
+          career_level: string
+          email: string
+          full_name: string
+          is_mlm_active: boolean
+          level: number
+          position: string
+          profile_id: string
+          referral_code: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1210,6 +1603,10 @@ export type Database = {
         Returns: boolean
       }
       process_mandate_commissions: { Args: never; Returns: number }
+      process_pack_purchase: {
+        Args: { p_pack_id: string; p_user_id: string }
+        Returns: Json
+      }
       purchase_partner_product: {
         Args: { _delivery?: Json; _product_id: string }
         Returns: Json
