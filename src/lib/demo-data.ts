@@ -1,14 +1,15 @@
 // Stub temporaire — les vraies données viennent désormais de Supabase.
 export interface UserProfile {
-  id: string;
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
+  id?: string;
+  user_id?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
   role?: string;
   wallet_balance?: number;
   career_level?: string;
   is_mlm_active?: boolean;
+  [key: string]: any;
 }
 
 export interface Pack {
