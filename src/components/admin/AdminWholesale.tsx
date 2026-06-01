@@ -71,7 +71,7 @@ const AdminWholesale = () => {
     setUploading(true);
     const urls: string[] = [];
     for (const file of files) {
-      const path = wholesale_products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")};
+      const path = `wholesale_products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
       const { error } = await supabase.storage.from("images").upload(path, file);
       if (!error) {
         const { data } = supabase.storage.from("images").getPublicUrl(path);
