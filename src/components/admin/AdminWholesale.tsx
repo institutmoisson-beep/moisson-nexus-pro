@@ -143,7 +143,7 @@ const AdminWholesale = () => {
     loadAll();
   };
 
-  const getName = (profile: any) => profile ? ${profile.first_name} ${profile.last_name} : "—";
+  const getName = (profile: any) => profile ? `${profile.first_name} ${profile.last_name}` : "—";
 
   return (
     <div className="space-y-6">
