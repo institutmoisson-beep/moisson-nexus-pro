@@ -208,6 +208,9 @@ export type Database = {
         Row: {
           commission_amount: number | null
           created_at: string | null
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_phone: string | null
           id: string
           product_id: string
           quantity: number
@@ -219,6 +222,9 @@ export type Database = {
         Insert: {
           commission_amount?: number | null
           created_at?: string | null
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_phone?: string | null
           id?: string
           product_id: string
           quantity?: number
@@ -230,6 +236,9 @@ export type Database = {
         Update: {
           commission_amount?: number | null
           created_at?: string | null
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_phone?: string | null
           id?: string
           product_id?: string
           quantity?: number
@@ -1367,7 +1376,11 @@ export type Database = {
           agent_id: string | null
           commission_amount: number | null
           created_at: string | null
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_phone: string | null
           id: string
+          notes: string | null
           product_id: string
           quantity: number
           status: string | null
@@ -1379,7 +1392,11 @@ export type Database = {
           agent_id?: string | null
           commission_amount?: number | null
           created_at?: string | null
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_phone?: string | null
           id?: string
+          notes?: string | null
           product_id: string
           quantity?: number
           status?: string | null
@@ -1391,7 +1408,11 @@ export type Database = {
           agent_id?: string | null
           commission_amount?: number | null
           created_at?: string | null
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_phone?: string | null
           id?: string
+          notes?: string | null
           product_id?: string
           quantity?: number
           status?: string | null
