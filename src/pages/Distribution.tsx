@@ -54,7 +54,7 @@ const DistributionPage = () => {
     if (!selectedProduct || !profile) return;
     const total = Number(selectedProduct.price_fcfa) * buyForm.quantity;
     if (Number(profile.wallet_balance) < total) {
-      toast.error(Solde insuffisant. Nécessaire : `${total.toLocaleString("fr-FR")} FCFA`);
+      toast.error(`Solde insuffisant. Nécessaire : ${total.toLocaleString("fr-FR")} FCFA`);
       return;
     }
     if (!buyForm.delivery_city || !buyForm.delivery_phone) {
