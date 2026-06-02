@@ -54,7 +54,7 @@ const DistributionPage = () => {
     if (!selectedProduct || !profile) return;
     const total = Number(selectedProduct.price_fcfa) * buyForm.quantity;
     if (Number(profile.wallet_balance) < total) {
-      toast.error(Solde insuffisant. Nécessaire : `${total.toLocaleString("fr-FR")} FCFA`);
+      toast.error(Solde insuffisant. Nécessaire : ${total.toLocaleString("fr-FR")} FCFA);
       return;
     }
     if (!buyForm.delivery_city || !buyForm.delivery_phone) {
@@ -84,9 +84,9 @@ const DistributionPage = () => {
         amount: total,
         type: "pack_purchase",
         status: "approved",
-        description: `Distribution — ${selectedProduct.name} × ${buyForm.quantity`},
+        description: Distribution — ${selectedProduct.name} × ${buyForm.quantity},
       });
-      toast.success(`✅ Commande confirmée ! ${total.toLocaleString("fr-FR")} FCFA débités.`);
+      toast.success(✅ Commande confirmée ! ${total.toLocaleString("fr-FR")} FCFA débités.);
       setShowBuyModal(false);
       setSelectedProduct(null);
       setBuyForm({ quantity: 1, delivery_city: "", delivery_address: "", delivery_phone: "" });
@@ -158,11 +158,11 @@ const DistributionPage = () => {
         {/* TABS */}
         <div className="flex gap-1 bg-secondary p-1 rounded-xl mb-6 w-fit">
           {[
-            { key: "catalogue", label: 🏪 Catalogue (`${products.length}`) },
-            { key: "my_orders", label: 📦 Mes Commandes (`${myOrders.length}`) },
+            { key: "catalogue", label: 🏪 Catalogue (${products.length}) },
+            { key: "my_orders", label: 📦 Mes Commandes (${myOrders.length}) },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              className={px-5 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}}>
               {tab.label}
             </button>
           ))}
@@ -248,7 +248,7 @@ const DistributionPage = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-heading font-bold text-primary">{Number(order.total_amount).toLocaleString("fr-FR")} F</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${cfg.color}`}>{cfg.label}</span>
+                      <span className={text-xs px-2 py-0.5 rounded-full font-semibold ${cfg.color}}>{cfg.label}</span>
                     </div>
                   </div>
                 </div>
@@ -278,7 +278,7 @@ const DistributionPage = () => {
                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                     {selectedProduct.images.map((_: any, i: number) => (
                       <button key={i} onClick={() => setImgIdx(i)}
-                        className={`w-2 h-2 rounded-full transition-all ${i === imgIdx ? "bg-white w-5" : "bg-white/50"}`} />
+                        className={w-2 h-2 rounded-full transition-all ${i === imgIdx ? "bg-white w-5" : "bg-white/50"}} />
                     ))}
                   </div>
                 </>
@@ -300,7 +300,7 @@ const DistributionPage = () => {
                 {selectedProduct.stock !== null && (
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground font-body">Stock</p>
-                    <p className={`text-lg font-bold ${selectedProduct.stock > 5 ? "text-harvest-green" : "text-destructive"}`}>
+                    <p className={text-lg font-bold ${selectedProduct.stock > 5 ? "text-harvest-green" : "text-destructive"}}>
                       {selectedProduct.stock > 0 ? selectedProduct.stock : "Rupture"}
                     </p>
                   </div>

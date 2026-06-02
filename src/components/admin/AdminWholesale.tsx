@@ -71,7 +71,7 @@ const AdminWholesale = () => {
     setUploading(true);
     const urls: string[] = [];
     for (const file of files) {
-      const path = `wholesale_products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.`]/g, "_")};
+      const path = wholesale_products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")};
       const { error } = await supabase.storage.from("images").upload(path, file);
       if (!error) {
         const { data } = supabase.storage.from("images").getPublicUrl(path);
@@ -118,7 +118,7 @@ const AdminWholesale = () => {
       await (supabase as any).rpc("pay_wholesale_commission", { _order_id: orderId });
       toast.success("✅ Livraison confirmée + commission versée !");
     } else {
-      toast.success(Statut mis à jour : `${status}`);
+      toast.success(Statut mis à jour : ${status});
     }
     loadAll();
   };
@@ -143,7 +143,7 @@ const AdminWholesale = () => {
     loadAll();
   };
 
-  const getName = (profile: any) => profile ? `${profile.first_name} ${profile.last_name`} : "—";
+  const getName = (profile: any) => profile ? ${profile.first_name} ${profile.last_name} : "—";
 
   return (
     <div className="space-y-6">
@@ -171,7 +171,7 @@ const AdminWholesale = () => {
           { label: "Propositions", value: proposals.filter(p => p.status === "pending").length, color: "text-gold" },
         ].map((s, i) => (
           <div key={i} className="card-elevated text-center p-4">
-            <p className={`text-2xl font-heading font-bold ${s.color}`}>{s.value}</p>
+            <p className={text-2xl font-heading font-bold ${s.color}}>{s.value}</p>
             <p className="text-xs text-muted-foreground font-body">{s.label}</p>
           </div>
         ))}
@@ -180,12 +180,12 @@ const AdminWholesale = () => {
       {/* Tabs */}
       <div className="flex gap-1 bg-secondary p-1 rounded-xl w-fit">
         {[
-          { key: "products",  label: 📦 Produits (`${products.length}`) },
-          { key: "orders",    label: 🛒 Commandes (`${orders.length}`) },
-          { key: "proposals", label: 📝 Propositions (`${proposals.filter(p => p.status === "pending").length}`) },
+          { key: "products",  label: 📦 Produits (${products.length}) },
+          { key: "orders",    label: 🛒 Commandes (${orders.length}) },
+          { key: "proposals", label: 📝 Propositions (${proposals.filter(p => p.status === "pending").length}) },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-            className={`px-4 py-2 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            className={px-4 py-2 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}}>
             {tab.label}
           </button>
         ))}
@@ -275,7 +275,7 @@ const AdminWholesale = () => {
       {activeTab === "products" && (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.map(p => (
-            <div key={p.id} className={`card-elevated ${!p.is_active ? "opacity-50" : ""}`}>
+            <div key={p.id} className={card-elevated ${!p.is_active ? "opacity-50" : ""}}>
               {p.images?.[0] && (
                 <div className="rounded-xl overflow-hidden aspect-video mb-3 bg-secondary">
                   <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
@@ -346,7 +346,7 @@ const AdminWholesale = () => {
                   <td className="py-2.5 px-3 text-right font-bold text-harvest-green">{Number(o.total_amount).toLocaleString("fr-FR")} F</td>
                   <td className="py-2.5 px-3 text-xs text-muted-foreground">{getName(o.agent) || "Direct"}</td>
                   <td className="py-2.5 px-3 text-center">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[o.status] || "bg-muted text-muted-foreground"}`}>
+                    <span className={text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[o.status] || "bg-muted text-muted-foreground"}}>
                       {o.status}
                     </span>
                   </td>

@@ -46,15 +46,15 @@ const TreeNode = ({ node, depth = 0 }: { node: MLMNode; depth?: number }) => {
     <div className="flex flex-col items-center">
       {/* Node Card */}
       <div className={`relative flex flex-col items-center p-3 rounded-xl border-2 min-w-[120px] max-w-[140px] text-center shadow-sm transition-all
-        `${depth === 0 ? "border-primary bg-primary/5 shadow-primary/20 shadow-md" : "border-border bg-card hover:border-primary/50"}`
+        ${depth === 0 ? "border-primary bg-primary/5 shadow-primary/20 shadow-md" : "border-border bg-card hover:border-primary/50"}
       `}>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm mb-1 ${rank.bg}`}>
+        <div className={w-8 h-8 rounded-full flex items-center justify-center text-sm mb-1 ${rank.bg}}>
           <span>{rank.icon}</span>
         </div>
         <p className="text-xs font-bold text-foreground font-body leading-tight truncate w-full">
           {node.profile?.first_name || "?"} {node.profile?.last_name?.charAt(0) || ""}
         </p>
-        <span className={text-[`9px] px-1.5 py-0.5 rounded-full font-semibold mt-0.5 ${rank.bg} ${rank.text`}}>
+        <span className={text-[9px] px-1.5 py-0.5 rounded-full font-semibold mt-0.5 ${rank.bg} ${rank.text}}>
           {node.current_rank}
         </span>
         {depth > 0 && (
@@ -175,7 +175,7 @@ const MLMDashboard = () => {
     return { ...node, children: children.map(c => buildTree(c.id, allNodes, depth + 1)) };
   };
 
-  const referralLink = profile ? `${window.location.origin}/inscription?ref=${profile.referral_code`} : "";
+  const referralLink = profile ? ${window.location.origin}/inscription?ref=${profile.referral_code} : "";
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -223,14 +223,14 @@ const MLMDashboard = () => {
           </div>
           <div className="flex gap-3 flex-wrap">
             {[
-              { label: "Gagné total", value: `${totalEarned.toLocaleString("fr-FR")} F`, color: "text-gold" },
-              { label: "En attente", value: `${pendingAmount.toLocaleString("fr-FR")} F`, color: "text-white" },
-              { label: "PV Gauche", value: `${Math.round(myNode?.accumulated_pv_left || 0)}`, color: "text-blue-200" },
-              { label: "PV Droite", value: `${Math.round(myNode?.accumulated_pv_right || 0)}`, color: "text-green-200" },
+              { label: "Gagné total", value: ${totalEarned.toLocaleString("fr-FR")} F, color: "text-gold" },
+              { label: "En attente", value: ${pendingAmount.toLocaleString("fr-FR")} F, color: "text-white" },
+              { label: "PV Gauche", value: ${Math.round(myNode?.accumulated_pv_left || 0)}, color: "text-blue-200" },
+              { label: "PV Droite", value: ${Math.round(myNode?.accumulated_pv_right || 0)}, color: "text-green-200" },
             ].map((s, i) => (
               <div key={i} className="bg-white/15 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20 text-center min-w-[80px]">
                 <p className="text-white/70 text-[10px] font-body mb-1">{s.label}</p>
-                <p className={`text-base font-heading font-bold ${s.color}`}>{s.value}</p>
+                <p className={text-base font-heading font-bold ${s.color}}>{s.value}</p>
               </div>
             ))}
           </div>
@@ -255,11 +255,11 @@ const MLMDashboard = () => {
         {[
           { key: "overview",     label: "📊 Vue d'ensemble" },
           { key: "tree",         label: "🌳 Arbre Binaire" },
-          { key: "commissions",  label: 💰 Commissions (`${commissions.length}`) },
+          { key: "commissions",  label: 💰 Commissions (${commissions.length}) },
           { key: "rank",         label: "🏆 Rangs & Progression" },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-            className={`px-4 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            className={px-4 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}}>
             {tab.label}
           </button>
         ))}
@@ -271,13 +271,13 @@ const MLMDashboard = () => {
           {/* Statistiques */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { icon: <Coins className="w-5 h-5 text-gold" />, label: "Commissions totales", value: `${totalEarned.toLocaleString("fr-FR")} FCFA`, bg: "bg-gold/10" },
-              { icon: <Clock className="w-5 h-5 text-primary" />, label: "En attente", value: `${pendingAmount.toLocaleString("fr-FR")} FCFA`, bg: "bg-primary/10" },
-              { icon: <TrendingUp className="w-5 h-5 text-harvest-green" />, label: "PV Total Gauche", value: `${Math.round(myNode?.total_pv_left || 0)}`, bg: "bg-harvest-green/10" },
-              { icon: <TrendingUp className="w-5 h-5 text-blue-500" />, label: "PV Total Droite", value: `${Math.round(myNode?.total_pv_right || 0)}`, bg: "bg-blue-500/10" },
+              { icon: <Coins className="w-5 h-5 text-gold" />, label: "Commissions totales", value: ${totalEarned.toLocaleString("fr-FR")} FCFA, bg: "bg-gold/10" },
+              { icon: <Clock className="w-5 h-5 text-primary" />, label: "En attente", value: ${pendingAmount.toLocaleString("fr-FR")} FCFA, bg: "bg-primary/10" },
+              { icon: <TrendingUp className="w-5 h-5 text-harvest-green" />, label: "PV Total Gauche", value: ${Math.round(myNode?.total_pv_left || 0)}, bg: "bg-harvest-green/10" },
+              { icon: <TrendingUp className="w-5 h-5 text-blue-500" />, label: "PV Total Droite", value: ${Math.round(myNode?.total_pv_right || 0)}, bg: "bg-blue-500/10" },
             ].map((s, i) => (
               <div key={i} className="card-elevated p-4">
-                <div className={`w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center mb-3`}>{s.icon}</div>
+                <div className={w-10 h-10 rounded-xl ${s.bg} flex items-center justify-center mb-3}>{s.icon}</div>
                 <p className="text-xs text-muted-foreground font-body">{s.label}</p>
                 <p className="text-xl font-heading font-bold text-foreground mt-1">{s.value}</p>
               </div>
@@ -297,7 +297,7 @@ const MLMDashboard = () => {
                 </div>
                 <div className="h-3 bg-secondary rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-primary to-gold rounded-full transition-all duration-500"
-                    style={{ width: `${progressPct}%` }} />
+                    style={{ width: ${progressPct}% }} />
                 </div>
                 <p className="text-xs text-muted-foreground font-body mt-1.5 text-right">{progressPct.toFixed(1)}%</p>
               </div>
@@ -334,9 +334,9 @@ const MLMDashboard = () => {
                 return (
                   <div key={i} className="bg-secondary/50 rounded-xl p-4">
                     <p className="text-xs text-muted-foreground font-body mb-2">{leg.label}</p>
-                    <p className={`text-2xl font-heading font-bold ${leg.textColor}`}>{Math.round(leg.value)} PV</p>
+                    <p className={text-2xl font-heading font-bold ${leg.textColor}}>{Math.round(leg.value)} PV</p>
                     <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
-                      <div className={`h-full bg-gradient-to-r ${leg.color} rounded-full`} style={{ width: `${pct}%` }} />
+                      <div className={h-full bg-gradient-to-r ${leg.color} rounded-full} style={{ width: ${pct}% }} />
                     </div>
                     <p className="text-[10px] text-muted-foreground font-body mt-1">{pairs} paire(s) complète(s) · {Math.round(pct)}% vers la suivante</p>
                   </div>
@@ -355,12 +355,12 @@ const MLMDashboard = () => {
                   return (
                     <div key={c.id} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
                       <div>
-                        <p className={`text-sm font-semibold font-body ${ct.color}`}>{ct.label}</p>
+                        <p className={text-sm font-semibold font-body ${ct.color}}>{ct.label}</p>
                         <p className="text-xs text-muted-foreground font-body">{new Date(c.created_at).toLocaleDateString("fr-FR")}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-heading font-bold text-foreground">+{Number(c.amount_fcfa).toLocaleString("fr-FR")} F</p>
-                        <span className={text-[`10px] px-2 py-0.5 rounded-full font-semibold ${c.status === "paid" ? "bg-harvest-green/20 text-harvest-green" : "bg-gold/20 text-gold"}`}>
+                        <span className={text-[10px] px-2 py-0.5 rounded-full font-semibold ${c.status === "paid" ? "bg-harvest-green/20 text-harvest-green" : "bg-gold/20 text-gold"}}>
                           {c.status === "paid" ? "✓ Payé" : "⏳ En attente"}
                         </span>
                       </div>
@@ -420,7 +420,7 @@ const MLMDashboard = () => {
               const total = commissions.filter(c => c.type === key).reduce((s, c) => s + Number(c.amount_fcfa), 0);
               return (
                 <div key={key} className="card-elevated p-3 text-center">
-                  <p className={`text-xs font-semibold font-body ${val.color} mb-1`}>{val.label}</p>
+                  <p className={text-xs font-semibold font-body ${val.color} mb-1}>{val.label}</p>
                   <p className="text-base font-heading font-bold text-foreground">{total.toLocaleString("fr-FR")} F</p>
                 </div>
               );
@@ -445,14 +445,14 @@ const MLMDashboard = () => {
                       <tr key={c.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
                         <td className="py-2.5 px-4 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString("fr-FR")}</td>
                         <td className="py-2.5 px-4">
-                          <span className={`text-xs font-semibold ${ct.color}`}>{ct.label}</span>
+                          <span className={text-xs font-semibold ${ct.color}}>{ct.label}</span>
                         </td>
                         <td className="py-2.5 px-4 text-right font-bold text-harvest-green">
                           +{Number(c.amount_fcfa).toLocaleString("fr-FR")} F
                         </td>
                         <td className="py-2.5 px-4 text-xs text-muted-foreground max-w-[200px] truncate">{c.description || "—"}</td>
                         <td className="py-2.5 px-4 text-center">
-                          <span className={text-[`10px] px-2 py-0.5 rounded-full font-semibold ${c.status === "paid" ? "bg-harvest-green/20 text-harvest-green" : "bg-gold/20 text-gold"}`}>
+                          <span className={text-[10px] px-2 py-0.5 rounded-full font-semibold ${c.status === "paid" ? "bg-harvest-green/20 text-harvest-green" : "bg-gold/20 text-gold"}}>
                             {c.status === "paid" ? "✓ Payé" : "⏳ Attente"}
                           </span>
                         </td>
@@ -500,11 +500,11 @@ const MLMDashboard = () => {
                     </div>
                   )}
                   <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-12 h-12 rounded-xl ${rankStyle.bg} flex items-center justify-center text-2xl`}>
+                    <div className={w-12 h-12 rounded-xl ${rankStyle.bg} flex items-center justify-center text-2xl}>
                       {rank.icon}
                     </div>
                     <div>
-                      <h3 className={`font-heading font-bold ${rankStyle.text}`}>{rank.name}</h3>
+                      <h3 className={font-heading font-bold ${rankStyle.text}}>{rank.name}</h3>
                       <p className="text-xs text-muted-foreground font-body">Min. {rank.min_pv_leg} PV / jambe</p>
                     </div>
                   </div>
@@ -533,7 +533,7 @@ const MLMDashboard = () => {
                 { title: "Bonus Binaire (Paire)", desc: "Chaque achat génère des PV. Quand vous avez 100 PV à gauche ET 100 PV à droite, vous recevez le bonus de paire selon votre rang.", color: "bg-gold/10 border-gold/20", icon: "⚡" },
                 { title: "Matching / Coaching (Génération)", desc: "Quand vos filleuls reçoivent un bonus binaire, vous recevez automatiquement 10% (G1), 5% (G2), 2.5% (G3) de leur gain.", color: "bg-harvest-green/10 border-harvest-green/20", icon: "🌿" },
               ].map((b, i) => (
-                <div key={i} className={`p-4 rounded-xl border ${b.color}`}>
+                <div key={i} className={p-4 rounded-xl border ${b.color}}>
                   <p className="font-semibold text-foreground font-body text-sm flex items-center gap-2 mb-1">
                     <span className="text-lg">{b.icon}</span> {b.title}
                   </p>
