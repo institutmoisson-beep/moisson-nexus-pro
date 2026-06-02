@@ -84,7 +84,7 @@ const WholesalePage = () => {
     if (!selectedProduct || !profile) return;
     const totalAmount = Number(selectedProduct.price_fcfa) * buyForm.quantity;
     if (Number(profile.wallet_balance) < totalAmount) {
-      toast.error(Solde insuffisant. Nécessaire : ${totalAmount.toLocaleString("fr-FR")} FCFA);
+      toast.error(Solde insuffisant. Nécessaire : `${totalAmount.toLocaleString("fr-FR")} FCFA`);
       return;
     }
     if (!buyForm.delivery_city || !buyForm.delivery_phone) {
@@ -119,10 +119,10 @@ const WholesalePage = () => {
         amount: totalAmount,
         type: "pack_purchase",
         status: "approved",
-        description: Achat Gros — ${selectedProduct.name} × ${buyForm.quantity} ${selectedProduct.unit},
+        description: `Achat Gros — ${selectedProduct.name} × ${buyForm.quantity``buyForm.quantity} ${selectedProduct.unit}`,
       });
 
-      toast.success(✅ Commande passée ! ${totalAmount.toLocaleString("fr-FR")} FCFA débités.);
+      toast.success(`✅ Commande passée ! ${totalAmount.toLocaleString("fr-FR")} FCFA débités.`);
       setShowBuyModal(false);
       setSelectedProduct(null);
       setBuyForm({ quantity: 1, delivery_city: "", delivery_address: "", delivery_phone: "", notes: "", for_client: false, client_name: "" });
@@ -140,7 +140,7 @@ const WholesalePage = () => {
     setUploadingImages(true);
     const urls: string[] = [];
     for (const file of files) {
-      const path = wholesale_proposals/${user!.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")};
+      const path = `wholesale_proposals/${user!.id}/${Date.now(``)}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
       const { error } = await supabase.storage.from("images").upload(path, file);
       if (!error) {
         const { data } = supabase.storage.from("images").getPublicUrl(path);
@@ -223,13 +223,13 @@ const WholesalePage = () => {
       {/* TABS */}
       <div className="flex gap-1 bg-secondary p-1 rounded-xl mb-6 flex-wrap">
         {[
-          { key: "catalogue",  label: 🏪 Catalogue (${products.length}) },
-          { key: "my_orders",  label: 📦 Mes Commandes (${myOrders.length}) },
-          { key: "agent",      label: 💼 Espace Agent (${agentOrders.length}) },
+          { key: "catalogue",  label: 🏪 Catalogue (`${products.length}`) },
+          { key: "my_orders",  label: 📦 Mes Commandes (`${myOrders.length}`) },
+          { key: "agent",      label: 💼 Espace Agent (`${agentOrders.length}`) },
           { key: "propose",    label: ➕ Proposer un produit },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-            className={px-4 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}}>
+            className={`px-4 py-2.5 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             {tab.label}
           </button>
         ))}
@@ -332,7 +332,7 @@ const WholesalePage = () => {
                       </p>
                     </div>
                   </div>
-                  <span className={text-xs px-2.5 py-1 rounded-full font-semibold ${cfg.color}}>{cfg.label}</span>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${cfg.color}`}>{cfg.label}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="bg-secondary rounded-lg p-2">
@@ -360,12 +360,12 @@ const WholesalePage = () => {
           <div className="grid grid-cols-3 gap-4">
             {[
               { label: "Commandes agent", value: stats.totalOrders, color: "text-foreground" },
-              { label: "Commissions reçues", value: ${stats.totalCommissions.toLocaleString("fr-FR")} F, color: "text-harvest-green" },
-              { label: "En attente", value: ~${stats.pendingCommissions.toLocaleString("fr-FR")} F, color: "text-gold" },
+              { label: "Commissions reçues", value: `${stats.totalCommissions.toLocaleString("fr-FR")} F`, color: "text-harvest-green" },
+              { label: "En attente", value: `~${stats.pendingCommissions.toLocaleString("fr-FR")} F`, color: "text-gold" },
             ].map((s, i) => (
               <div key={i} className="card-elevated text-center p-4">
                 <p className="text-xs text-muted-foreground font-body mb-1">{s.label}</p>
-                <p className={text-xl font-heading font-bold ${s.color}}>{s.value}</p>
+                <p className={`text-xl font-heading font-bold ${s.color}`}>{s.value}</p>
               </div>
             ))}
           </div>
@@ -417,7 +417,7 @@ const WholesalePage = () => {
                             }
                           </td>
                           <td className="py-2.5 px-3 text-center">
-                            <span className={text-xs px-2 py-0.5 rounded-full font-semibold ${cfg.color}}>{cfg.label}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${cfg.color}`}>{cfg.label}</span>
                           </td>
                         </tr>
                       );
@@ -485,7 +485,7 @@ const WholesalePage = () => {
               <label className="flex items-center gap-3 px-4 py-3 rounded-lg border-2 border-dashed border-input cursor-pointer hover:border-primary transition-colors">
                 <Upload className="w-5 h-5 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground font-body">
-                  {uploadingImages ? "Upload en cours…" : Choisir des images (${proposeForm.images.length}/4)}
+                  {uploadingImages ? "Upload en cours…" : Choisir des images (`${proposeForm.images.length}/4`)}
                 </span>
                 <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImages || proposeForm.images.length >= 4} />
               </label>
@@ -620,9 +620,9 @@ const WholesalePage = () => {
                 </div>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
-                <div className={w-10 h-6 rounded-full transition-colors ${buyForm.for_client ? "bg-harvest-green" : "bg-muted"} relative}
+                <div className={`w-10 h-6 rounded-full transition-colors ${buyForm.for_client ? "bg-harvest-green" : "bg-muted"} relative`}
                   onClick={() => setBuyForm(f => ({ ...f, for_client: !f.for_client }))}>
-                  <div className={absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${buyForm.for_client ? "left-5" : "left-1"}} />
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${buyForm.for_client ? "left-5" : "left-1"}`} />
                 </div>
                 <span className="text-sm font-body text-foreground">Je commande pour un client (mode agent)</span>
               </label>

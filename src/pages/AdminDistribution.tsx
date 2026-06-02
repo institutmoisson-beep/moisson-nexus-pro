@@ -59,7 +59,7 @@ const AdminDistribution = () => {
     setUploading(true);
     const urls: string[] = [];
     for (const file of files) {
-      const path = distribution_products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")};
+      const path = `distribution_products/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.`]/g, "_")};
       const { error } = await supabase.storage.from("images").upload(path, file);
       if (!error) {
         const { data } = supabase.storage.from("images").getPublicUrl(path);
@@ -106,7 +106,7 @@ const AdminDistribution = () => {
       }
       toast.success("✅ Livraison confirmée !");
     } else {
-      toast.success(Statut → ${status});
+      toast.success(`Statut → ${status}`);
     }
     loadAll();
   };
@@ -137,10 +137,10 @@ const AdminDistribution = () => {
           { label: "Produits actifs", value: products.filter(p => p.is_active).length, color: "text-primary" },
           { label: "Commandes", value: orders.length, color: "text-foreground" },
           { label: "Livrées", value: orders.filter(o => o.status === "delivered").length, color: "text-harvest-green" },
-          { label: "CA livré", value: ${totalRevenue.toLocaleString("fr-FR")} F, color: "text-gold" },
+          { label: "CA livré", value: `${totalRevenue.toLocaleString("fr-FR")} F`, color: "text-gold" },
         ].map((s, i) => (
           <div key={i} className="card-elevated text-center p-4">
-            <p className={text-xl font-heading font-bold ${s.color}}>{s.value}</p>
+            <p className={`text-xl font-heading font-bold ${s.color}`}>{s.value}</p>
             <p className="text-xs text-muted-foreground font-body">{s.label}</p>
           </div>
         ))}
@@ -149,11 +149,11 @@ const AdminDistribution = () => {
       {/* Tabs */}
       <div className="flex gap-1 bg-secondary p-1 rounded-xl w-fit">
         {[
-          { key: "products", label: 📦 Produits (${products.length}) },
-          { key: "orders",   label: 🛒 Commandes (${orders.length}) },
+          { key: "products", label: 📦 Produits (`${products.length}`) },
+          { key: "orders",   label: 🛒 Commandes (`${orders.length}`) },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-            className={px-4 py-2 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}}>
+            className={`px-4 py-2 rounded-lg text-sm font-body font-semibold transition-all ${activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
             {tab.label}
           </button>
         ))}
@@ -223,7 +223,7 @@ const AdminDistribution = () => {
       {activeTab === "products" && (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {products.map(p => (
-            <div key={p.id} className={card-elevated ${!p.is_active ? "opacity-50" : ""}}>
+            <div key={p.id} className={`card-elevated ${!p.is_active ? "opacity-50" : ""}`}>
               {p.images?.[0] && (
                 <div className="rounded-xl overflow-hidden aspect-square mb-3 bg-secondary">
                   <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />
@@ -277,13 +277,13 @@ const AdminDistribution = () => {
               {orders.map(o => (
                 <tr key={o.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
                   <td className="py-2.5 px-3 text-xs text-muted-foreground whitespace-nowrap">{new Date(o.created_at).toLocaleDateString("fr-FR")}</td>
-                  <td className="py-2.5 px-3 font-medium">{o.buyer ? ${o.buyer.first_name} ${o.buyer.last_name} : "—"}</td>
+                  <td className="py-2.5 px-3 font-medium">{o.buyer ? `${o.buyer.first_name} ${o.buyer.last_name`} : "—"}</td>
                   <td className="py-2.5 px-3 text-xs">{o.distribution_products?.name}</td>
                   <td className="py-2.5 px-3 text-center font-bold">{o.quantity}</td>
                   <td className="py-2.5 px-3 text-right font-bold text-primary">{Number(o.total_amount).toLocaleString("fr-FR")} F</td>
                   <td className="py-2.5 px-3 text-xs text-muted-foreground">{o.delivery_city || "—"}</td>
                   <td className="py-2.5 px-3 text-center">
-                    <span className={text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[o.status] || "bg-muted text-muted-foreground"}}>{o.status}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_COLORS[o.status] || "bg-muted text-muted-foreground"}`}>{o.status}</span>
                   </td>
                   <td className="py-2.5 px-3 text-right">
                     {o.status !== "delivered" && o.status !== "cancelled" && (
