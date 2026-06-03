@@ -1,56 +1,102 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Package, Users, Wallet, TrendingUp, Box, Truck } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+
+import AdminOverview from "@/components/admin/AdminOverview";
+import AdminPacks from "@/components/admin/AdminPacks";
+import AdminSectors from "@/components/admin/AdminSectors";
+import AdminPartners from "@/components/admin/AdminPartners";
+import AdminMandatePacks from "@/components/admin/AdminMandatePacks";
+import AdminWholesale from "@/components/admin/AdminWholesale";
+import AdminOrders from "@/components/admin/AdminOrders";
+import AdminTransactions from "@/components/admin/AdminTransactions";
+import AdminPayments from "@/components/admin/AdminPayments";
+import AdminUsers from "@/components/admin/AdminUsers";
+import AdminCommissions from "@/components/admin/AdminCommissions";
+import AdminBonuses from "@/components/admin/AdminBonuses";
+import AdminFees from "@/components/admin/AdminFees";
+import AdminMSN from "@/components/admin/AdminMSN";
+import AdminMSNWithdrawals from "@/components/admin/AdminMSNWithdrawals";
+import AdminCommunityFund from "@/components/admin/AdminCommunityFund";
+import AdminUrgentCases from "@/components/admin/AdminUrgentCases";
+import AdminRegionalRoles from "@/components/admin/AdminRegionalRoles";
+import AdminProDirectory from "@/components/admin/AdminProDirectory";
+import AdminPorteurAffaires from "@/components/admin/AdminPorteurAffaires";
+
+const TABS: { value: string; label: string; Component: React.ComponentType }[] = [
+  { value: "overview", label: "Vue d'ensemble", Component: AdminOverview },
+  { value: "users", label: "Membres", Component: AdminUsers },
+  { value: "packs", label: "Packs MLM", Component: AdminPacks },
+  { value: "sectors", label: "Secteurs", Component: AdminSectors },
+  { value: "partners", label: "Partenaires / Stands", Component: AdminPartners },
+  { value: "mandate", label: "Vente par Mandat", Component: AdminMandatePacks },
+  { value: "wholesale", label: "Produits en Gros", Component: AdminWholesale },
+  { value: "orders", label: "Commandes", Component: AdminOrders },
+  { value: "transactions", label: "Transactions", Component: AdminTransactions },
+  { value: "payments", label: "Moyens de paiement", Component: AdminPayments },
+  { value: "commissions", label: "Commissions", Component: AdminCommissions },
+  { value: "bonuses", label: "Bonus de carrière", Component: AdminBonuses },
+  { value: "fees", label: "Frais", Component: AdminFees },
+  { value: "msn", label: "MSN Coins", Component: AdminMSN },
+  { value: "msn-wd", label: "Retraits MSN", Component: AdminMSNWithdrawals },
+  { value: "fund", label: "Fond Communautaire", Component: AdminCommunityFund },
+  { value: "urgent", label: "Cas urgents", Component: AdminUrgentCases },
+  { value: "regional", label: "Moissonneurs Pays/Ville", Component: AdminRegionalRoles },
+  { value: "pro", label: "Annuaire Pro", Component: AdminProDirectory },
+  { value: "porteur", label: "Porteurs d'affaires", Component: AdminPorteurAffaires },
+];
 
 const AdminDashboard = () => {
+  const { getUserProfile, loading } = useAuth();
   const navigate = useNavigate();
+  const [tab, setTab] = useState("overview");
+  const [allowed, setAllowed] = useState(false);
 
-  const adminModules = [
-    { icon: Package, label: "Gestion des Packs MLM", desc: "Créer, modifier, configurer les commissions", path: "/admin/packs", color: "text-primary", bgColor: "bg-primary/10" },
-    { icon: Box, label: "Produits en Gros", desc: "Gérer les produits en gros", path: "/admin/wholesale", color: "text-harvest-green", bgColor: "bg-harvest-green/10" },
-    { icon: Truck, label: "Distribution", desc: "Produits de distribution", path: "/admin/distribution", color: "text-gold", bgColor: "bg-gold/10" },
-    { icon: Users, label: "Membres", desc: "Gérer les utilisateurs", path: "/admin/membres", color: "text-blue-500", bgColor: "bg-blue-500/10" },
-    { icon: Wallet, label: "Transactions", desc: "Valider dépôts et retraits", path: "/admin/transactions", color: "text-purple-500", bgColor: "bg-purple-500/10" },
-    { icon: TrendingUp, label: "Statistiques MLM", desc: "Performances du réseau", path: "/admin/stats", color: "text-orange-500", bgColor: "bg-orange-500/10" },
-  ];
+  useEffect(() => {
+    if (loading) return;
+    const profile = getUserProfile();
+    if (!profile) return;
+    if (profile.role !== "admin") {
+      toast.error("Accès réservé aux administrateurs");
+      navigate("/dashboard");
+    } else {
+      setAllowed(true);
+    }
+  }, [loading, getUserProfile, navigate]);
+
+  if (!allowed) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12 text-muted-foreground font-body">Vérification des accès…</div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
       <h1 className="text-3xl font-heading font-bold text-foreground mb-2">🛡️ Administration</h1>
-      <p className="text-muted-foreground font-body mb-8">Gérez l'ensemble de la plateforme Moisson Nexus Pro</p>
+      <p className="text-muted-foreground font-body mb-6">Gérez l'ensemble de la plateforme Institut Moisson</p>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {adminModules.map((module) => (
-          <button key={module.path} onClick={() => navigate(module.path)} className="card-elevated text-left hover:shadow-lg transition-all hover:scale-[1.02]">
-            <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-xl ${module.bgColor} flex items-center justify-center shrink-0`}>
-                <module.icon className={`w-6 h-6 ${module.color}`} />
-              </div>
-              <div>
-                <h3 className="font-heading font-bold text-foreground mb-1">{module.label}</h3>
-                <p className="text-sm text-muted-foreground font-body">{module.desc}</p>
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-8">
-        <h2 className="font-heading font-bold text-lg text-foreground mb-4">📊 Aperçu rapide</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Membres actifs", value: "0", color: "text-foreground" },
-            { label: "Packs vendus", value: "0", color: "text-primary" },
-            { label: "Commissions", value: "0 FCFA", color: "text-gold" },
-            { label: "Transactions", value: "0", color: "text-harvest-green" },
-          ].map(stat => (
-            <div key={stat.label} className="card-elevated text-center">
-              <p className={`text-3xl font-heading font-bold ${stat.color}`}>{stat.value}</p>
-              <p className="text-xs text-muted-foreground font-body">{stat.label}</p>
-            </div>
-          ))}
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <div className="overflow-x-auto -mx-4 px-4 mb-6">
+          <TabsList className="inline-flex w-max gap-1">
+            {TABS.map(t => (
+              <TabsTrigger key={t.value} value={t.value} className="whitespace-nowrap text-xs">
+                {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
         </div>
-      </div>
+
+        {TABS.map(({ value, Component }) => (
+          <TabsContent key={value} value={value} className="mt-0">
+            <Component />
+          </TabsContent>
+        ))}
+      </Tabs>
     </DashboardLayout>
   );
 };
