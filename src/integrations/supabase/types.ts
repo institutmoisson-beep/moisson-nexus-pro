@@ -1623,6 +1623,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      lookup_referral_code: { Args: { _code: string }; Returns: string }
       process_mandate_commissions: { Args: never; Returns: number }
       process_pack_purchase: {
         Args: { p_pack_id: string; p_user_id: string }
