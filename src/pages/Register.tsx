@@ -115,23 +115,17 @@ const Register = () => {
     let referrerId: string | null = null;
 
     if (form.referralCode.trim()) {
-      const { data: referrer } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("referral_code", form.referralCode.trim().toUpperCase())
-        .maybeSingle();
+      const { data: lookupId, error: lookupError } = await supabase
+        .rpc("lookup_referral_code" as any, { _code: form.referralCode.trim() });
 
-      if (!referrer) {
+      if (lookupError || !lookupId) {
         toast.error("Code de parrainage invalide");
         return;
       }
-      referrerId = referrer.id;
+      referrerId = lookupId as string;
     } else {
-      const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true });
-      if (count && count > 0) {
-        toast.error("Le code de parrainage est obligatoire");
-        return;
-      }
+      toast.error("Le code de parrainage est obligatoire");
+      return;
     }
 
     setLoading(true);
