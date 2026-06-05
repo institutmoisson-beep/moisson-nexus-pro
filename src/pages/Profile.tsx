@@ -25,6 +25,11 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ phone: "", address: "", city: "", street: "", country: "" });
+  const [uploading, setUploading] = useState<null | "avatar" | "front" | "back">(null);
+  const [signedIds, setSignedIds] = useState<{ front?: string; back?: string }>({});
+  const avatarRef = useRef<HTMLInputElement>(null);
+  const frontRef = useRef<HTMLInputElement>(null);
+  const backRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
   useEffect(() => { if (user) loadProfile(); }, [user]);
@@ -32,8 +37,56 @@ const ProfilePage = () => {
   const loadProfile = async () => {
     const { data } = await supabase.from("profiles").select("*").eq("user_id", user!.id).single();
     setProfile(data);
-    if (data) setForm({ phone: data.phone || "", address: data.address || "", city: data.city || "", street: data.street || "", country: data.country || "" });
+    if (data) {
+      setForm({ phone: data.phone || "", address: data.address || "", city: data.city || "", street: data.street || "", country: data.country || "" });
+      const signed: { front?: string; back?: string } = {};
+      if (data.id_card_front_url) {
+        const { data: s } = await supabase.storage.from("id-cards").createSignedUrl(data.id_card_front_url, 600);
+        if (s) signed.front = s.signedUrl;
+      }
+      if (data.id_card_back_url) {
+        const { data: s } = await supabase.storage.from("id-cards").createSignedUrl(data.id_card_back_url, 600);
+        if (s) signed.back = s.signedUrl;
+      }
+      setSignedIds(signed);
+    }
   };
+
+  const uploadAvatar = async (file: File) => {
+    if (!file.type.startsWith("image/")) return toast.error("Image uniquement");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Max 5 Mo");
+    setUploading("avatar");
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `avatars/${user!.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from("images").getPublicUrl(path);
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", user!.id);
+      toast.success("Photo de profil mise à jour");
+      loadProfile();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setUploading(null); }
+  };
+
+  const uploadIdCard = async (file: File, side: "front" | "back") => {
+    if (!file.type.startsWith("image/")) return toast.error("Image uniquement");
+    if (file.size > 8 * 1024 * 1024) return toast.error("Max 8 Mo");
+    setUploading(side);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user!.id}/${side}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("id-cards").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const col = side === "front" ? "id_card_front_url" : "id_card_back_url";
+      await supabase.from("profiles").update({ [col]: path, is_verified: false } as any).eq("user_id", user!.id);
+      toast.success(`Pièce ${side === "front" ? "recto" : "verso"} envoyée — en attente de vérification`);
+      loadProfile();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setUploading(null); }
+  };
+
+
 
   const saveProfile = async () => {
     await supabase.from("profiles").update(form).eq("user_id", user!.id);
