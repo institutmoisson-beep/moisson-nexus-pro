@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, Ban, CheckCircle, UserCog, UserCheck, PlusCircle, MinusCircle } from "lucide-react";
+import { Eye, Ban, CheckCircle, UserCog, UserCheck, PlusCircle, ShieldCheck, ShieldOff } from "lucide-react";
 
 const STAFF_ROLES = [
   { key: "financier", label: "Financier" },
@@ -24,8 +24,27 @@ const AdminUsers = () => {
   const [showRoleModal, setShowRoleModal] = useState<any>(null);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [submittingCredit, setSubmittingCredit] = useState(false);
+  const [idImages, setIdImages] = useState<{ front?: string; back?: string }>({});
 
   useEffect(() => { loadUsers(); }, []);
+
+  useEffect(() => {
+    (async () => {
+      setIdImages({});
+      if (!selectedUser) return;
+      const sig: { front?: string; back?: string } = {};
+      if (selectedUser.id_card_front_url) {
+        const { data } = await supabase.storage.from("id-cards").createSignedUrl(selectedUser.id_card_front_url, 600);
+        if (data) sig.front = data.signedUrl;
+      }
+      if (selectedUser.id_card_back_url) {
+        const { data } = await supabase.storage.from("id-cards").createSignedUrl(selectedUser.id_card_back_url, 600);
+        if (data) sig.back = data.signedUrl;
+      }
+      setIdImages(sig);
+    })();
+  }, [selectedUser?.id]);
+
 
   const loadUsers = async () => {
     const [usersRes, rolesRes] = await Promise.all([
@@ -47,6 +66,21 @@ const AdminUsers = () => {
     await supabase.from("profiles").update({ is_pro_visible: !current }).eq("id", profileId);
     toast.success(!current ? "Ajouté à l'annuaire Pros" : "Retiré de l'annuaire Pros"); loadUsers();
   };
+
+  const toggleVerified = async () => {
+    if (!selectedUser) return;
+    const next = !selectedUser.is_verified;
+    const { error } = await supabase.from("profiles").update({
+      is_verified: next,
+      verified_at: next ? new Date().toISOString() : null,
+      verified_by: next ? user!.id : null,
+    } as any).eq("id", selectedUser.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ? "Compte vérifié ✅" : "Vérification retirée");
+    await loadUsers();
+    setSelectedUser((p: any) => p ? { ...p, is_verified: next } : null);
+  };
+
 
   const handleCreditDebit = async () => {
     if (!selectedUser || !creditAmount || !creditMotif) {
@@ -159,9 +193,12 @@ const AdminUsers = () => {
                   </div>
                 </td>
                 <td className="py-2 px-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${u.is_suspended ? "bg-destructive/20 text-destructive" : "bg-harvest-green/20 text-harvest-green"}`}>
-                    {u.is_suspended ? "Suspendu" : "Actif"}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold w-fit ${u.is_suspended ? "bg-destructive/20 text-destructive" : "bg-harvest-green/20 text-harvest-green"}`}>
+                      {u.is_suspended ? "Suspendu" : "Actif"}
+                    </span>
+                    {u.is_verified && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit bg-primary/15 text-primary inline-flex items-center gap-1"><ShieldCheck className="w-3 h-3" />Vérifié</span>}
+                  </div>
                 </td>
                 <td className="py-2 px-3 text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -206,6 +243,41 @@ const AdminUsers = () => {
               <span className="text-muted-foreground">Solde actuel:</span>
               <span className="font-bold text-primary text-xl ml-2">{Number(selectedUser.wallet_balance).toLocaleString("fr-FR")} FCFA</span>
             </div>
+          </div>
+
+          {/* Section Pièce d'identité */}
+          <div className="border-t border-border pt-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-heading font-semibold text-foreground flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                Pièce d'identité & vérification
+              </h4>
+              <button onClick={toggleVerified}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 ${selectedUser.is_verified ? "bg-destructive/15 text-destructive hover:bg-destructive/25" : "bg-harvest-green text-white hover:opacity-90"}`}>
+                {selectedUser.is_verified ? <><ShieldOff className="w-3.5 h-3.5" /> Retirer la vérification</> : <><ShieldCheck className="w-3.5 h-3.5" /> Activer Compte Vérifié</>}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {(["front","back"] as const).map(side => {
+                const url = side === "front" ? idImages.front : idImages.back;
+                const label = side === "front" ? "Recto" : "Verso";
+                return (
+                  <div key={side} className="rounded-lg border border-border bg-secondary/30 p-2">
+                    <p className="text-xs text-muted-foreground font-body mb-1.5">{label}</p>
+                    {url ? (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+                        <img src={url} alt={label} className="w-full aspect-[1.586/1] object-cover rounded-md hover:opacity-90 transition" />
+                      </a>
+                    ) : (
+                      <div className="w-full aspect-[1.586/1] rounded-md bg-muted/50 flex items-center justify-center text-xs text-muted-foreground">Non fourni</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {selectedUser.is_verified && selectedUser.verified_at && (
+              <p className="text-xs text-muted-foreground font-body mt-2">Vérifié le {new Date(selectedUser.verified_at).toLocaleString("fr-FR")}</p>
+            )}
           </div>
 
           {/* Section Crédit / Débit */}

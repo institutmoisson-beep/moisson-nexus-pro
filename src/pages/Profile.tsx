@@ -1,8 +1,8 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Share2, User, Mail, Phone, MapPin, Award, Truck } from "lucide-react";
+import { Copy, Share2, Mail, Phone, MapPin, Award, Truck, Camera, ShieldCheck, IdCard, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -25,6 +25,11 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ phone: "", address: "", city: "", street: "", country: "" });
+  const [uploading, setUploading] = useState<null | "avatar" | "front" | "back">(null);
+  const [signedIds, setSignedIds] = useState<{ front?: string; back?: string }>({});
+  const avatarRef = useRef<HTMLInputElement>(null);
+  const frontRef = useRef<HTMLInputElement>(null);
+  const backRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
   useEffect(() => { if (user) loadProfile(); }, [user]);
@@ -32,8 +37,56 @@ const ProfilePage = () => {
   const loadProfile = async () => {
     const { data } = await supabase.from("profiles").select("*").eq("user_id", user!.id).single();
     setProfile(data);
-    if (data) setForm({ phone: data.phone || "", address: data.address || "", city: data.city || "", street: data.street || "", country: data.country || "" });
+    if (data) {
+      setForm({ phone: data.phone || "", address: data.address || "", city: data.city || "", street: data.street || "", country: data.country || "" });
+      const signed: { front?: string; back?: string } = {};
+      if (data.id_card_front_url) {
+        const { data: s } = await supabase.storage.from("id-cards").createSignedUrl(data.id_card_front_url, 600);
+        if (s) signed.front = s.signedUrl;
+      }
+      if (data.id_card_back_url) {
+        const { data: s } = await supabase.storage.from("id-cards").createSignedUrl(data.id_card_back_url, 600);
+        if (s) signed.back = s.signedUrl;
+      }
+      setSignedIds(signed);
+    }
   };
+
+  const uploadAvatar = async (file: File) => {
+    if (!file.type.startsWith("image/")) return toast.error("Image uniquement");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Max 5 Mo");
+    setUploading("avatar");
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `avatars/${user!.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from("images").getPublicUrl(path);
+      await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", user!.id);
+      toast.success("Photo de profil mise à jour");
+      loadProfile();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setUploading(null); }
+  };
+
+  const uploadIdCard = async (file: File, side: "front" | "back") => {
+    if (!file.type.startsWith("image/")) return toast.error("Image uniquement");
+    if (file.size > 8 * 1024 * 1024) return toast.error("Max 8 Mo");
+    setUploading(side);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${user!.id}/${side}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("id-cards").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const col = side === "front" ? "id_card_front_url" : "id_card_back_url";
+      await supabase.from("profiles").update({ [col]: path, is_verified: false } as any).eq("user_id", user!.id);
+      toast.success(`Pièce ${side === "front" ? "recto" : "verso"} envoyée — en attente de vérification`);
+      loadProfile();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setUploading(null); }
+  };
+
+
 
   const saveProfile = async () => {
     await supabase.from("profiles").update(form).eq("user_id", user!.id);
@@ -59,14 +112,30 @@ const ProfilePage = () => {
       {/* Info Card */}
       <div className="card-elevated mb-6">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-2xl font-bold text-primary">{profile.first_name.charAt(0)}{profile.last_name.charAt(0)}</span>
+          <div className="relative group">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-primary/20">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-2xl font-bold text-primary">{profile.first_name.charAt(0)}{profile.last_name.charAt(0)}</span>
+              )}
+            </div>
+            <button onClick={() => avatarRef.current?.click()} disabled={uploading === "avatar"}
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:opacity-90 disabled:opacity-50">
+              {uploading === "avatar" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+            </button>
+            <input ref={avatarRef} type="file" accept="image/*" className="hidden"
+              onChange={e => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
           </div>
           <div>
-            <h2 className="text-xl font-heading font-bold text-foreground">{profile.first_name} {profile.last_name}</h2>
+            <h2 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
+              {profile.first_name} {profile.last_name}
+              {profile.is_verified && <span title="Compte vérifié" className="inline-flex items-center gap-1 text-xs font-semibold bg-harvest-green/20 text-harvest-green px-2 py-0.5 rounded-full"><ShieldCheck className="w-3 h-3" />Vérifié</span>}
+            </h2>
             <p className="text-sm text-muted-foreground font-body capitalize">{profile.career_level.replace(/_/g, " ")}</p>
           </div>
         </div>
+
 
         <div className="grid md:grid-cols-2 gap-4 text-sm font-body">
           <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" /> {profile.email}</div>
@@ -110,7 +179,43 @@ const ProfilePage = () => {
         )}
       </div>
 
-      {/* Referral Card */}
+      {/* ID Card Verification */}
+      <div className="card-elevated mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2"><IdCard className="w-5 h-5 text-primary" /> Pièce d'identité</h2>
+          {profile.is_verified ? (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold bg-harvest-green/20 text-harvest-green px-2.5 py-1 rounded-full"><ShieldCheck className="w-3.5 h-3.5" /> Compte vérifié</span>
+          ) : (profile.id_card_front_url || profile.id_card_back_url) ? (
+            <span className="text-xs font-semibold bg-gold/20 text-gold px-2.5 py-1 rounded-full">En attente</span>
+          ) : (
+            <span className="text-xs font-semibold bg-muted text-muted-foreground px-2.5 py-1 rounded-full">Non fournie</span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground font-body mb-4">Téléchargez le recto et le verso de votre pièce d'identité. Vos images restent privées et ne sont visibles que par l'administration.</p>
+        <div className="grid grid-cols-2 gap-3">
+          {(["front","back"] as const).map(side => {
+            const url = side === "front" ? signedIds.front : signedIds.back;
+            const label = side === "front" ? "Recto" : "Verso";
+            const ref = side === "front" ? frontRef : backRef;
+            return (
+              <div key={side} className="rounded-lg border border-dashed border-border bg-secondary/30 p-2 flex flex-col items-center">
+                <div className="w-full aspect-[1.586/1] rounded-md bg-muted/50 overflow-hidden flex items-center justify-center mb-2">
+                  {url ? <img src={url} alt={label} className="w-full h-full object-cover" /> : <IdCard className="w-8 h-8 text-muted-foreground/50" />}
+                </div>
+                <button onClick={() => ref.current?.click()} disabled={uploading === side}
+                  className="w-full btn-hero !text-xs !py-2 !px-2 inline-flex items-center justify-center gap-1">
+                  {uploading === side ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                  {url ? `Remplacer ${label.toLowerCase()}` : `Envoyer ${label.toLowerCase()}`}
+                </button>
+                <input ref={ref} type="file" accept="image/*" className="hidden"
+                  onChange={e => e.target.files?.[0] && uploadIdCard(e.target.files[0], side)} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+
       <div className="card-elevated mb-6">
         <h2 className="text-lg font-heading font-semibold text-foreground mb-4">🌱 Code Moissonneur</h2>
         <div className="flex items-center gap-3 mb-4">

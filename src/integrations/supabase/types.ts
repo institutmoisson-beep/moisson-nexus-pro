@@ -1066,10 +1066,13 @@ export type Database = {
           first_name: string
           geolocation: Json | null
           id: string
+          id_card_back_url: string | null
+          id_card_front_url: string | null
           id_moissonneur: string | null
           is_mlm_active: boolean
           is_pro_visible: boolean
           is_suspended: boolean
+          is_verified: boolean
           last_name: string
           phone: string | null
           preferred_currency: string
@@ -1079,6 +1082,8 @@ export type Database = {
           updated_at: string
           user_id: string
           verification_token: string
+          verified_at: string | null
+          verified_by: string | null
           wallet_balance: number
         }
         Insert: {
@@ -1093,10 +1098,13 @@ export type Database = {
           first_name: string
           geolocation?: Json | null
           id?: string
+          id_card_back_url?: string | null
+          id_card_front_url?: string | null
           id_moissonneur?: string | null
           is_mlm_active?: boolean
           is_pro_visible?: boolean
           is_suspended?: boolean
+          is_verified?: boolean
           last_name: string
           phone?: string | null
           preferred_currency?: string
@@ -1106,6 +1114,8 @@ export type Database = {
           updated_at?: string
           user_id: string
           verification_token?: string
+          verified_at?: string | null
+          verified_by?: string | null
           wallet_balance?: number
         }
         Update: {
@@ -1120,10 +1130,13 @@ export type Database = {
           first_name?: string
           geolocation?: Json | null
           id?: string
+          id_card_back_url?: string | null
+          id_card_front_url?: string | null
           id_moissonneur?: string | null
           is_mlm_active?: boolean
           is_pro_visible?: boolean
           is_suspended?: boolean
+          is_verified?: boolean
           last_name?: string
           phone?: string | null
           preferred_currency?: string
@@ -1133,6 +1146,8 @@ export type Database = {
           updated_at?: string
           user_id?: string
           verification_token?: string
+          verified_at?: string | null
+          verified_by?: string | null
           wallet_balance?: number
         }
         Relationships: [
