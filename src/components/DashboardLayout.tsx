@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { 
   LayoutDashboard, Wallet, Package, Users, ShoppingCart, 
   UserCircle, LogOut, Menu, X, Store, Truck, Box, Shield,
-  Briefcase, FileSignature, Coins, HeartHandshake, AlertTriangle, Building2, Handshake
+  Briefcase, FileSignature, Coins, HeartHandshake, AlertTriangle, Building2, Handshake,
+  IdCard, ScanLine
 } from "lucide-react";
 
 const BASE_NAV = [
@@ -23,6 +24,8 @@ const BASE_NAV = [
   { path: "/moissonneurs-pros", label: "Annuaire Pro", icon: Building2 },
   { path: "/cas-urgents", label: "Cas Urgents", icon: AlertTriangle },
   { path: "/fond-communautaire", label: "Fond Communautaire", icon: HeartHandshake },
+  { path: "/carte-identite", label: "Ma Carte", icon: IdCard },
+  { path: "/verifier", label: "Vérifier", icon: ScanLine },
   { path: "/profil", label: "Profil", icon: UserCircle },
 ];
 

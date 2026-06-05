@@ -32,6 +32,8 @@ const Wholesale = lazy(() => import("./pages/Wholesale"));
 const Distribution = lazy(() => import("./pages/Distribution"));
 const AdminWholesale = lazy(() => import("./pages/AdminWholesale"));
 const AdminDistribution = lazy(() => import("./pages/AdminDistribution"));
+const CarteIdentite = lazy(() => import("./pages/CarteIdentite"));
+const Verifier = lazy(() => import("./pages/Verifier"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -115,6 +117,9 @@ const App = () => (
                 <Route path="/fond-communautaire" element={<CommunityFund />} />
                 <Route path="/produits-en-gros" element={<Wholesale />} />
                 <Route path="/distribution" element={<Distribution />} />
+                <Route path="/carte-identite" element={<CarteIdentite />} />
+                <Route path="/verifier" element={<Verifier />} />
+                <Route path="/verify" element={<Verifier />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
