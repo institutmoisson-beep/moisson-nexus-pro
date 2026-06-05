@@ -193,9 +193,12 @@ const AdminUsers = () => {
                   </div>
                 </td>
                 <td className="py-2 px-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${u.is_suspended ? "bg-destructive/20 text-destructive" : "bg-harvest-green/20 text-harvest-green"}`}>
-                    {u.is_suspended ? "Suspendu" : "Actif"}
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold w-fit ${u.is_suspended ? "bg-destructive/20 text-destructive" : "bg-harvest-green/20 text-harvest-green"}`}>
+                      {u.is_suspended ? "Suspendu" : "Actif"}
+                    </span>
+                    {u.is_verified && <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold w-fit bg-primary/15 text-primary inline-flex items-center gap-1"><ShieldCheck className="w-3 h-3" />Vérifié</span>}
+                  </div>
                 </td>
                 <td className="py-2 px-3 text-right">
                   <div className="flex items-center justify-end gap-1">
