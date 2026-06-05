@@ -1,8 +1,8 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Share2, User, Mail, Phone, MapPin, Award, Truck } from "lucide-react";
+import { Copy, Share2, Mail, Phone, MapPin, Award, Truck, Camera, ShieldCheck, IdCard, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
