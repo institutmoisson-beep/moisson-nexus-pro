@@ -245,10 +245,47 @@ const AdminUsers = () => {
             </div>
           </div>
 
+          {/* Section Pièce d'identité */}
+          <div className="border-t border-border pt-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-heading font-semibold text-foreground flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-primary" />
+                Pièce d'identité & vérification
+              </h4>
+              <button onClick={toggleVerified}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 ${selectedUser.is_verified ? "bg-destructive/15 text-destructive hover:bg-destructive/25" : "bg-harvest-green text-white hover:opacity-90"}`}>
+                {selectedUser.is_verified ? <><ShieldOff className="w-3.5 h-3.5" /> Retirer la vérification</> : <><ShieldCheck className="w-3.5 h-3.5" /> Activer Compte Vérifié</>}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {(["front","back"] as const).map(side => {
+                const url = side === "front" ? idImages.front : idImages.back;
+                const label = side === "front" ? "Recto" : "Verso";
+                return (
+                  <div key={side} className="rounded-lg border border-border bg-secondary/30 p-2">
+                    <p className="text-xs text-muted-foreground font-body mb-1.5">{label}</p>
+                    {url ? (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+                        <img src={url} alt={label} className="w-full aspect-[1.586/1] object-cover rounded-md hover:opacity-90 transition" />
+                      </a>
+                    ) : (
+                      <div className="w-full aspect-[1.586/1] rounded-md bg-muted/50 flex items-center justify-center text-xs text-muted-foreground">Non fourni</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {selectedUser.is_verified && selectedUser.verified_at && (
+              <p className="text-xs text-muted-foreground font-body mt-2">Vérifié le {new Date(selectedUser.verified_at).toLocaleString("fr-FR")}</p>
+            )}
+          </div>
+
           {/* Section Crédit / Débit */}
           <div className="border-t border-border pt-4">
             <h4 className="font-heading font-semibold text-foreground mb-3 flex items-center gap-2">
               <PlusCircle className="w-4 h-4 text-harvest-green" />
+              Créditer / Débiter le portefeuille
+            </h4>
               Créditer / Débiter le portefeuille
             </h4>
             <p className="text-xs text-muted-foreground font-body mb-3">
