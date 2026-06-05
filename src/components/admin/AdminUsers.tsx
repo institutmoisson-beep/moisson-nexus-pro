@@ -67,6 +67,21 @@ const AdminUsers = () => {
     toast.success(!current ? "Ajouté à l'annuaire Pros" : "Retiré de l'annuaire Pros"); loadUsers();
   };
 
+  const toggleVerified = async () => {
+    if (!selectedUser) return;
+    const next = !selectedUser.is_verified;
+    const { error } = await supabase.from("profiles").update({
+      is_verified: next,
+      verified_at: next ? new Date().toISOString() : null,
+      verified_by: next ? user!.id : null,
+    } as any).eq("id", selectedUser.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ? "Compte vérifié ✅" : "Vérification retirée");
+    await loadUsers();
+    setSelectedUser((p: any) => p ? { ...p, is_verified: next } : null);
+  };
+
+
   const handleCreditDebit = async () => {
     if (!selectedUser || !creditAmount || !creditMotif) {
       toast.error("Remplissez tous les champs (montant et motif obligatoires)");
