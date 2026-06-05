@@ -112,14 +112,30 @@ const ProfilePage = () => {
       {/* Info Card */}
       <div className="card-elevated mb-6">
         <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-2xl font-bold text-primary">{profile.first_name.charAt(0)}{profile.last_name.charAt(0)}</span>
+          <div className="relative group">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-primary/20">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-2xl font-bold text-primary">{profile.first_name.charAt(0)}{profile.last_name.charAt(0)}</span>
+              )}
+            </div>
+            <button onClick={() => avatarRef.current?.click()} disabled={uploading === "avatar"}
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:opacity-90 disabled:opacity-50">
+              {uploading === "avatar" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+            </button>
+            <input ref={avatarRef} type="file" accept="image/*" className="hidden"
+              onChange={e => e.target.files?.[0] && uploadAvatar(e.target.files[0])} />
           </div>
           <div>
-            <h2 className="text-xl font-heading font-bold text-foreground">{profile.first_name} {profile.last_name}</h2>
+            <h2 className="text-xl font-heading font-bold text-foreground flex items-center gap-2">
+              {profile.first_name} {profile.last_name}
+              {profile.is_verified && <span title="Compte vérifié" className="inline-flex items-center gap-1 text-xs font-semibold bg-harvest-green/20 text-harvest-green px-2 py-0.5 rounded-full"><ShieldCheck className="w-3 h-3" />Vérifié</span>}
+            </h2>
             <p className="text-sm text-muted-foreground font-body capitalize">{profile.career_level.replace(/_/g, " ")}</p>
           </div>
         </div>
+
 
         <div className="grid md:grid-cols-2 gap-4 text-sm font-body">
           <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" /> {profile.email}</div>
