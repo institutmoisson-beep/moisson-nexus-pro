@@ -286,8 +286,6 @@ const AdminUsers = () => {
               <PlusCircle className="w-4 h-4 text-harvest-green" />
               Créditer / Débiter le portefeuille
             </h4>
-              Créditer / Débiter le portefeuille
-            </h4>
             <p className="text-xs text-muted-foreground font-body mb-3">
               Cette opération sera enregistrée dans l'historique des transactions de l'utilisateur.
             </p>
