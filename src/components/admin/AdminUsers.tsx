@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, Ban, CheckCircle, UserCog, UserCheck, PlusCircle, MinusCircle } from "lucide-react";
+import { Eye, Ban, CheckCircle, UserCog, UserCheck, PlusCircle, ShieldCheck, ShieldOff } from "lucide-react";
 
 const STAFF_ROLES = [
   { key: "financier", label: "Financier" },
