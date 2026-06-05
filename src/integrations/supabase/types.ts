@@ -1062,9 +1062,11 @@ export type Database = {
           country: string | null
           created_at: string
           email: string
+          est_souverain: boolean
           first_name: string
           geolocation: Json | null
           id: string
+          id_moissonneur: string | null
           is_mlm_active: boolean
           is_pro_visible: boolean
           is_suspended: boolean
@@ -1076,6 +1078,7 @@ export type Database = {
           street: string | null
           updated_at: string
           user_id: string
+          verification_token: string
           wallet_balance: number
         }
         Insert: {
@@ -1086,9 +1089,11 @@ export type Database = {
           country?: string | null
           created_at?: string
           email: string
+          est_souverain?: boolean
           first_name: string
           geolocation?: Json | null
           id?: string
+          id_moissonneur?: string | null
           is_mlm_active?: boolean
           is_pro_visible?: boolean
           is_suspended?: boolean
@@ -1100,6 +1105,7 @@ export type Database = {
           street?: string | null
           updated_at?: string
           user_id: string
+          verification_token?: string
           wallet_balance?: number
         }
         Update: {
@@ -1110,9 +1116,11 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string
+          est_souverain?: boolean
           first_name?: string
           geolocation?: Json | null
           id?: string
+          id_moissonneur?: string | null
           is_mlm_active?: boolean
           is_pro_visible?: boolean
           is_suspended?: boolean
@@ -1124,6 +1132,7 @@ export type Database = {
           street?: string | null
           updated_at?: string
           user_id?: string
+          verification_token?: string
           wallet_balance?: number
         }
         Relationships: [
@@ -1632,6 +1641,18 @@ export type Database = {
       purchase_partner_product: {
         Args: { _delivery?: Json; _product_id: string }
         Returns: Json
+      }
+      verify_moissonneur: {
+        Args: { _token: string }
+        Returns: {
+          avatar_url: string
+          career_level: string
+          est_souverain: boolean
+          full_name: string
+          id_moissonneur: string
+          is_mlm_active: boolean
+          is_suspended: boolean
+        }[]
       }
     }
     Enums: {
