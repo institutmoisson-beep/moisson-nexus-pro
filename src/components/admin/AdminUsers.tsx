@@ -24,8 +24,27 @@ const AdminUsers = () => {
   const [showRoleModal, setShowRoleModal] = useState<any>(null);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [submittingCredit, setSubmittingCredit] = useState(false);
+  const [idImages, setIdImages] = useState<{ front?: string; back?: string }>({});
 
   useEffect(() => { loadUsers(); }, []);
+
+  useEffect(() => {
+    (async () => {
+      setIdImages({});
+      if (!selectedUser) return;
+      const sig: { front?: string; back?: string } = {};
+      if (selectedUser.id_card_front_url) {
+        const { data } = await supabase.storage.from("id-cards").createSignedUrl(selectedUser.id_card_front_url, 600);
+        if (data) sig.front = data.signedUrl;
+      }
+      if (selectedUser.id_card_back_url) {
+        const { data } = await supabase.storage.from("id-cards").createSignedUrl(selectedUser.id_card_back_url, 600);
+        if (data) sig.back = data.signedUrl;
+      }
+      setIdImages(sig);
+    })();
+  }, [selectedUser?.id]);
+
 
   const loadUsers = async () => {
     const [usersRes, rolesRes] = await Promise.all([
