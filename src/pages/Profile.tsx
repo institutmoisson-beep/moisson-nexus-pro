@@ -179,7 +179,43 @@ const ProfilePage = () => {
         )}
       </div>
 
-      {/* Referral Card */}
+      {/* ID Card Verification */}
+      <div className="card-elevated mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg font-heading font-semibold text-foreground flex items-center gap-2"><IdCard className="w-5 h-5 text-primary" /> Pièce d'identité</h2>
+          {profile.is_verified ? (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold bg-harvest-green/20 text-harvest-green px-2.5 py-1 rounded-full"><ShieldCheck className="w-3.5 h-3.5" /> Compte vérifié</span>
+          ) : (profile.id_card_front_url || profile.id_card_back_url) ? (
+            <span className="text-xs font-semibold bg-gold/20 text-gold px-2.5 py-1 rounded-full">En attente</span>
+          ) : (
+            <span className="text-xs font-semibold bg-muted text-muted-foreground px-2.5 py-1 rounded-full">Non fournie</span>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground font-body mb-4">Téléchargez le recto et le verso de votre pièce d'identité. Vos images restent privées et ne sont visibles que par l'administration.</p>
+        <div className="grid grid-cols-2 gap-3">
+          {(["front","back"] as const).map(side => {
+            const url = side === "front" ? signedIds.front : signedIds.back;
+            const label = side === "front" ? "Recto" : "Verso";
+            const ref = side === "front" ? frontRef : backRef;
+            return (
+              <div key={side} className="rounded-lg border border-dashed border-border bg-secondary/30 p-2 flex flex-col items-center">
+                <div className="w-full aspect-[1.586/1] rounded-md bg-muted/50 overflow-hidden flex items-center justify-center mb-2">
+                  {url ? <img src={url} alt={label} className="w-full h-full object-cover" /> : <IdCard className="w-8 h-8 text-muted-foreground/50" />}
+                </div>
+                <button onClick={() => ref.current?.click()} disabled={uploading === side}
+                  className="w-full btn-hero !text-xs !py-2 !px-2 inline-flex items-center justify-center gap-1">
+                  {uploading === side ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                  {url ? `Remplacer ${label.toLowerCase()}` : `Envoyer ${label.toLowerCase()}`}
+                </button>
+                <input ref={ref} type="file" accept="image/*" className="hidden"
+                  onChange={e => e.target.files?.[0] && uploadIdCard(e.target.files[0], side)} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+
       <div className="card-elevated mb-6">
         <h2 className="text-lg font-heading font-semibold text-foreground mb-4">🌱 Code Moissonneur</h2>
         <div className="flex items-center gap-3 mb-4">
