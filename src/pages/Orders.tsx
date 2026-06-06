@@ -29,6 +29,8 @@ const OrdersPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<UnifiedOrder[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [packCommissions, setPackCommissions] = useState<Record<string, { level: number; percentage: number }[]>>({});
   const [noteForm, setNoteForm] = useState<{ id: string; kind: "pack" | "product"; note: string; rating: number } | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
