@@ -18,8 +18,11 @@ type UnifiedOrder = {
   delivery_city?: string | null;
   delivery_country?: string | null;
   delivery_phone?: string | null;
+  delivery_street?: string | null;
   user_note?: string | null;
   user_rating?: number | null;
+  pack_id?: string | null;
+  pack_description?: string | null;
 };
 
 const OrdersPage = () => {
