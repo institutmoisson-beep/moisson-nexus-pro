@@ -86,6 +86,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
+      <InstallPWA />
       <HashRouter>
         <AuthProvider>
           <ErrorBoundary>
