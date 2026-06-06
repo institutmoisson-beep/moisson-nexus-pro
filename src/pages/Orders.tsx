@@ -37,12 +37,22 @@ const OrdersPage = () => {
   useEffect(() => { if (user) loadData(); }, [user]);
 
   const loadData = async () => {
-    const [packOrdersRes, productPurchasesRes, packsRes] = await Promise.all([
+    const [packOrdersRes, productPurchasesRes, packsRes, profileRes, commRes] = await Promise.all([
       supabase.from("pack_orders").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }),
       supabase.from("product_purchases").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }),
-      supabase.from("packs").select("id, name, images"),
+      supabase.from("packs").select("id, name, images, description"),
+      supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
+      supabase.from("pack_commissions").select("pack_id, level_number, percentage").order("level_number"),
     ]);
     const packsList = packsRes.data || [];
+    setProfile(profileRes.data);
+
+    const commMap: Record<string, { level: number; percentage: number }[]> = {};
+    (commRes.data || []).forEach((c: any) => {
+      if (!commMap[c.pack_id]) commMap[c.pack_id] = [];
+      commMap[c.pack_id].push({ level: c.level_number, percentage: Number(c.percentage) });
+    });
+    setPackCommissions(commMap);
 
     const packOrders: UnifiedOrder[] = (packOrdersRes.data || []).map((o: any) => {
       const p = packsList.find(p => p.id === o.pack_id);
@@ -50,8 +60,10 @@ const OrdersPage = () => {
         id: o.id, kind: "pack", name: p?.name || "Pack",
         image: p?.images?.[0], amount: Number(o.amount_paid),
         status: o.status, created_at: o.created_at,
-        delivery_city: o.delivery_city, delivery_country: o.delivery_country, delivery_phone: o.delivery_phone,
+        delivery_city: o.delivery_city, delivery_country: o.delivery_country,
+        delivery_phone: o.delivery_phone, delivery_street: o.delivery_street,
         user_note: o.user_note, user_rating: o.user_rating,
+        pack_id: o.pack_id, pack_description: p?.description,
       };
     });
 
@@ -66,6 +78,27 @@ const OrdersPage = () => {
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     setOrders(merged);
+  };
+
+  const downloadReceipt = (order: UnifiedOrder) => {
+    if (!profile) { toast.error("Profil non chargé"); return; }
+    generatePurchaseReceiptHTML({
+      memberName: `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Moissonneur",
+      memberEmail: profile.email || "",
+      memberPhone: profile.phone || undefined,
+      memberCity: profile.city || undefined,
+      memberCountry: profile.country || undefined,
+      referralCode: profile.referral_code || "",
+      packName: `${order.name} — 1 part d'action du Grenier`,
+      packPrice: order.amount,
+      orderId: order.id,
+      deliveryStreet: order.delivery_street || undefined,
+      deliveryCity: order.delivery_city || undefined,
+      deliveryCountry: order.delivery_country || undefined,
+      deliveryPhone: order.delivery_phone || undefined,
+      commissions: order.pack_id ? packCommissions[order.pack_id] || [] : [],
+      date: new Date(order.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }),
+    });
   };
 
   const statusLabel = (s: string) => {
