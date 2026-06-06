@@ -145,9 +145,36 @@ const InstallPWA = () => {
     );
   }
 
-  if (isIOS() && !isStandalone()) return null;
+  if (isIOS()) {
+    return (
+      <button
+        onClick={() =>
+          alert(
+            "Pour installer Institut Moisson sur votre iPhone :\n\n1. Touchez l'icône Partager ⬆️ en bas de Safari\n2. Faites défiler et touchez « Sur l'écran d'accueil »\n3. Touchez « Ajouter » en haut à droite"
+          )
+        }
+        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-primary-foreground shadow-2xl hover:bg-primary/90 transition-all font-body font-semibold"
+      >
+        <Download className="w-5 h-5" />
+        Installer sur iPhone
+      </button>
+    );
+  }
 
-  return null;
+  // Fallback Android/desktop (no prompt captured yet)
+  return (
+    <button
+      onClick={() =>
+        alert(
+          "Pour installer l'application :\n\n• Chrome / Edge : ouvrez le menu ⋮ puis « Installer l'application »\n• Android : menu navigateur → « Ajouter à l'écran d'accueil »\n\nSi le bouton ne s'affiche pas, vérifiez que vous êtes sur la version publiée."
+        )
+      }
+      className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-primary-foreground shadow-2xl hover:bg-primary/90 transition-all font-body font-semibold"
+    >
+      <Download className="w-5 h-5" />
+      Installer l'app
+    </button>
+  );
 };
 
 export default InstallPWA;

@@ -35,6 +35,7 @@ const AdminDistribution = lazy(() => import("./pages/AdminDistribution"));
 const CarteIdentite = lazy(() => import("./pages/CarteIdentite"));
 const Verifier = lazy(() => import("./pages/Verifier"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+import InstallPWA from "@/components/InstallPWA";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +86,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
+      <InstallPWA />
       <HashRouter>
         <AuthProvider>
           <ErrorBoundary>

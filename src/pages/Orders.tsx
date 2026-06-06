@@ -2,9 +2,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Star, ShoppingBag } from "lucide-react";
+import { Package, Star, ShoppingBag, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+import { generatePurchaseReceiptHTML } from "@/lib/generatePDF";
 
 type UnifiedOrder = {
   id: string;
@@ -17,26 +18,41 @@ type UnifiedOrder = {
   delivery_city?: string | null;
   delivery_country?: string | null;
   delivery_phone?: string | null;
+  delivery_street?: string | null;
   user_note?: string | null;
   user_rating?: number | null;
+  pack_id?: string | null;
+  pack_description?: string | null;
 };
 
 const OrdersPage = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<UnifiedOrder[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [packCommissions, setPackCommissions] = useState<Record<string, { level: number; percentage: number }[]>>({});
   const [noteForm, setNoteForm] = useState<{ id: string; kind: "pack" | "product"; note: string; rating: number } | null>(null);
 
   useEffect(() => { if (!loading && !user) navigate("/connexion"); }, [user, loading]);
   useEffect(() => { if (user) loadData(); }, [user]);
 
   const loadData = async () => {
-    const [packOrdersRes, productPurchasesRes, packsRes] = await Promise.all([
+    const [packOrdersRes, productPurchasesRes, packsRes, profileRes, commRes] = await Promise.all([
       supabase.from("pack_orders").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }),
       supabase.from("product_purchases").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }),
-      supabase.from("packs").select("id, name, images"),
+      supabase.from("packs").select("id, name, images, description"),
+      supabase.from("profiles").select("*").eq("user_id", user!.id).single(),
+      supabase.from("pack_commissions").select("pack_id, level_number, percentage").order("level_number"),
     ]);
     const packsList = packsRes.data || [];
+    setProfile(profileRes.data);
+
+    const commMap: Record<string, { level: number; percentage: number }[]> = {};
+    (commRes.data || []).forEach((c: any) => {
+      if (!commMap[c.pack_id]) commMap[c.pack_id] = [];
+      commMap[c.pack_id].push({ level: c.level_number, percentage: Number(c.percentage) });
+    });
+    setPackCommissions(commMap);
 
     const packOrders: UnifiedOrder[] = (packOrdersRes.data || []).map((o: any) => {
       const p = packsList.find(p => p.id === o.pack_id);
@@ -44,8 +60,10 @@ const OrdersPage = () => {
         id: o.id, kind: "pack", name: p?.name || "Pack",
         image: p?.images?.[0], amount: Number(o.amount_paid),
         status: o.status, created_at: o.created_at,
-        delivery_city: o.delivery_city, delivery_country: o.delivery_country, delivery_phone: o.delivery_phone,
+        delivery_city: o.delivery_city, delivery_country: o.delivery_country,
+        delivery_phone: o.delivery_phone, delivery_street: o.delivery_street,
         user_note: o.user_note, user_rating: o.user_rating,
+        pack_id: o.pack_id, pack_description: p?.description,
       };
     });
 
@@ -60,6 +78,27 @@ const OrdersPage = () => {
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
     setOrders(merged);
+  };
+
+  const downloadReceipt = (order: UnifiedOrder) => {
+    if (!profile) { toast.error("Profil non chargé"); return; }
+    generatePurchaseReceiptHTML({
+      memberName: `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "Moissonneur",
+      memberEmail: profile.email || "",
+      memberPhone: profile.phone || undefined,
+      memberCity: profile.city || undefined,
+      memberCountry: profile.country || undefined,
+      referralCode: profile.referral_code || "",
+      packName: `${order.name} — 1 part d'action du Grenier`,
+      packPrice: order.amount,
+      orderId: order.id,
+      deliveryStreet: order.delivery_street || undefined,
+      deliveryCity: order.delivery_city || undefined,
+      deliveryCountry: order.delivery_country || undefined,
+      deliveryPhone: order.delivery_phone || undefined,
+      commissions: order.pack_id ? packCommissions[order.pack_id] || [] : [],
+      date: new Date(order.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }),
+    });
   };
 
   const statusLabel = (s: string) => {
@@ -136,6 +175,17 @@ const OrdersPage = () => {
                   )}
                 </div>
               </div>
+              {order.kind === "pack" && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <button
+                    onClick={() => downloadReceipt(order)}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-body font-semibold transition-colors"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    Télécharger le reçu PDF (Part d'action du Grenier)
+                  </button>
+                </div>
+              )}
               {canRate && (
                 <div className="mt-3 border-t border-border pt-3">
                   {noteForm?.id === order.id ? (
