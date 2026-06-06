@@ -2,9 +2,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Package, Star, ShoppingBag } from "lucide-react";
+import { Package, Star, ShoppingBag, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+import { generatePurchaseReceiptHTML } from "@/lib/generatePDF";
 
 type UnifiedOrder = {
   id: string;
