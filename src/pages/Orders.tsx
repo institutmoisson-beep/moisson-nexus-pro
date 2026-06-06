@@ -175,6 +175,17 @@ const OrdersPage = () => {
                   )}
                 </div>
               </div>
+              {order.kind === "pack" && (
+                <div className="mt-3 border-t border-border pt-3">
+                  <button
+                    onClick={() => downloadReceipt(order)}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-body font-semibold transition-colors"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    Télécharger le reçu PDF (Part d'action du Grenier)
+                  </button>
+                </div>
+              )}
               {canRate && (
                 <div className="mt-3 border-t border-border pt-3">
                   {noteForm?.id === order.id ? (
