@@ -244,7 +244,7 @@ const StandPage = () => {
             product_name: buyItem.name,
             amount_paid: price,
             is_digital: !!buyItem.is_digital,
-            digital_content: buyItem.is_digital ? buyItem.digital_content : null,
+            digital_content: null,
             delivery_address: deliveryForm.address,
             delivery_city: deliveryForm.city,
             delivery_country: deliveryForm.country,
