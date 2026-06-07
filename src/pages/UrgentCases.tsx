@@ -87,14 +87,13 @@ const UrgentCases = () => {
     }
     setSubmitting(true);
     try {
-      // Upload images
+      // Upload images — store the storage PATH (bucket is private; we render via signed URLs)
       const urls: string[] = [];
       for (const file of files) {
         const path = `${user!.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
         const { error: upErr } = await supabase.storage.from("urgent-cases").upload(path, file);
         if (upErr) { console.error(upErr); continue; }
-        const { data: pub } = supabase.storage.from("urgent-cases").getPublicUrl(path);
-        urls.push(pub.publicUrl);
+        urls.push(path);
       }
 
       // Get profile for country/city
