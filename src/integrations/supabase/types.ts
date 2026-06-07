@@ -1612,6 +1612,30 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_partner_product: {
+        Args: { _id: string }
+        Returns: {
+          allow_cod: boolean
+          created_at: string
+          description: string | null
+          digital_content: string | null
+          id: string
+          images: string[] | null
+          is_active: boolean
+          is_digital: boolean
+          name: string
+          partner_company_id: string
+          price: number
+          stock: number | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "partner_products"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_withdraw_from_fund: {
         Args: { _amount: number; _reason: string }
         Returns: Json
@@ -1709,6 +1733,10 @@ export type Database = {
       purchase_partner_product: {
         Args: { _delivery?: Json; _product_id: string }
         Returns: Json
+      }
+      regional_set_suspension: {
+        Args: { _reason?: string; _suspend: boolean; _target_user_id: string }
+        Returns: undefined
       }
       verify_moissonneur: {
         Args: { _token: string }
