@@ -176,10 +176,8 @@ const AdminCaseDialog = ({ c, profile, onClose, onUpdateStatus }: any) => {
           {c.address && <p className="text-sm">📍 {c.address}</p>}
           {c.images?.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
-              {c.images.map((url: string, i: number) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer">
-                  <img src={url} alt="" className="rounded-lg w-full h-24 object-cover" />
-                </a>
+              {c.images.map((p: string, i: number) => (
+                <SignedImage key={i} bucket="urgent-cases" pathOrUrl={p} alt="" className="rounded-lg w-full h-24 object-cover" />
               ))}
             </div>
           )}
