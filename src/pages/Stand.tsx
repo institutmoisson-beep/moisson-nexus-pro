@@ -257,8 +257,8 @@ const StandPage = () => {
             metadata: { coins_used: coins, product_id: buyItem.id },
             processed_at: new Date().toISOString(),
           });
-          if (buyItem.is_digital && buyItem.digital_content) {
-            setDigitalDelivery(buyItem.digital_content);
+          if (buyItem.is_digital) {
+            toast.info("Le contenu numérique vous sera livré sous peu.");
           }
         } else {
           // COD - paiement à la livraison
