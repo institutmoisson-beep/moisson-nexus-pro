@@ -1543,6 +1543,59 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_products_public: {
+        Row: {
+          allow_cod: boolean | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          images: string[] | null
+          is_active: boolean | null
+          is_digital: boolean | null
+          name: string | null
+          partner_company_id: string | null
+          price: number | null
+          stock: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_cod?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          images?: string[] | null
+          is_active?: boolean | null
+          is_digital?: boolean | null
+          name?: string | null
+          partner_company_id?: string | null
+          price?: number | null
+          stock?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_cod?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          images?: string[] | null
+          is_active?: boolean | null
+          is_digital?: boolean | null
+          name?: string | null
+          partner_company_id?: string | null
+          price?: number | null
+          stock?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_products_partner_company_id_fkey"
+            columns: ["partner_company_id"]
+            isOneToOne: false
+            referencedRelation: "partner_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       regional_staff_view: {
         Row: {
           assigned_city: string | null
