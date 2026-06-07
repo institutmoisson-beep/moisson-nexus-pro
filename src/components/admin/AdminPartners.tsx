@@ -84,13 +84,19 @@ const AdminPartners = () => {
     setProductImages([]); loadData();
   };
 
-  const startEditProduct = (prod: any) => {
+  const startEditProduct = async (prod: any) => {
     setEditProduct(prod);
     setShowProductForm(prod.partner_company_id);
+    // digital_content is no longer returned by the public select — fetch it via the admin RPC
+    let digitalContent = "";
+    if (prod.is_digital) {
+      const { data } = await (supabase as any).rpc("admin_get_partner_product", { _id: prod.id });
+      digitalContent = data?.digital_content || "";
+    }
     setProductForm({
       name: prod.name, description: prod.description || "", price: String(prod.price),
       allow_cod: !!prod.allow_cod, is_digital: !!prod.is_digital,
-      digital_content: prod.digital_content || "", stock: prod.stock != null ? String(prod.stock) : "",
+      digital_content: digitalContent, stock: prod.stock != null ? String(prod.stock) : "",
     });
     setProductImages(prod.images || []);
   };

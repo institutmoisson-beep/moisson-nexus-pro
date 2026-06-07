@@ -9,6 +9,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, MessageCircle, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import SignedImage from "@/components/SignedImage";
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: "bg-blue-500/10 text-blue-600 border-blue-500/20",
@@ -175,10 +176,8 @@ const AdminCaseDialog = ({ c, profile, onClose, onUpdateStatus }: any) => {
           {c.address && <p className="text-sm">📍 {c.address}</p>}
           {c.images?.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
-              {c.images.map((url: string, i: number) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer">
-                  <img src={url} alt="" className="rounded-lg w-full h-24 object-cover" />
-                </a>
+              {c.images.map((p: string, i: number) => (
+                <SignedImage key={i} bucket="urgent-cases" pathOrUrl={p} alt="" className="rounded-lg w-full h-24 object-cover" />
               ))}
             </div>
           )}

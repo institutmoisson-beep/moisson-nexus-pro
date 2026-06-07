@@ -244,7 +244,7 @@ const StandPage = () => {
             product_name: buyItem.name,
             amount_paid: price,
             is_digital: !!buyItem.is_digital,
-            digital_content: buyItem.is_digital ? buyItem.digital_content : null,
+            digital_content: null,
             delivery_address: deliveryForm.address,
             delivery_city: deliveryForm.city,
             delivery_country: deliveryForm.country,
@@ -257,8 +257,8 @@ const StandPage = () => {
             metadata: { coins_used: coins, product_id: buyItem.id },
             processed_at: new Date().toISOString(),
           });
-          if (buyItem.is_digital && buyItem.digital_content) {
-            setDigitalDelivery(buyItem.digital_content);
+          if (buyItem.is_digital) {
+            toast.info("Le contenu numérique vous sera livré sous peu.");
           }
         } else {
           // COD - paiement à la livraison
