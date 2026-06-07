@@ -9,6 +9,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, MessageCircle, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import SignedImage from "@/components/SignedImage";
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: "bg-blue-500/10 text-blue-600 border-blue-500/20",
