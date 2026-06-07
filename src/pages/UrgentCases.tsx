@@ -14,6 +14,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, Plus, Send, Image as ImageIcon, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+import SignedImage from "@/components/SignedImage";
 
 type UrgentCase = {
   id: string;
