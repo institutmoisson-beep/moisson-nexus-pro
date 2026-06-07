@@ -300,10 +300,8 @@ const CaseDetailDialog = ({ c, onClose, userId }: { c: UrgentCase; onClose: () =
           {c.address && <p className="text-sm">📍 {c.address}</p>}
           {c.images?.length > 0 && (
             <div className="grid grid-cols-3 gap-2">
-              {c.images.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer">
-                  <img src={url} alt={`Photo ${i + 1}`} className="rounded-lg w-full h-24 object-cover" />
-                </a>
+              {c.images.map((p, i) => (
+                <SignedImage key={i} bucket="urgent-cases" pathOrUrl={p} alt={`Photo ${i + 1}`} className="rounded-lg w-full h-24 object-cover" />
               ))}
             </div>
           )}
