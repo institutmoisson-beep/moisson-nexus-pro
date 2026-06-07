@@ -114,17 +114,16 @@ const MoissonneurPays = () => {
     if (motif === null) return;
 
     setProcessing(member.user_id);
-    await supabase.from("profiles").update({ is_suspended: !member.is_suspended }).eq("user_id", member.user_id);
-
-    // Log action
-    await (supabase as any).from("regional_moderation_log").insert({
-      moderator_id: user!.id,
-      target_user_id: member.user_id,
-      action: member.is_suspended ? "reactivate" : "suspend",
-      motif,
-      scope: "country",
-      scope_value: assignedCountry,
+    const { error: rpcErr } = await (supabase as any).rpc("regional_set_suspension", {
+      _target_user_id: member.user_id,
+      _suspend: !member.is_suspended,
+      _reason: motif,
     });
+    if (rpcErr) {
+      toast.error(rpcErr.message || "Action refusée");
+      setProcessing(null);
+      return;
+    }
 
     toast.success(`Membre ${action} avec succès`);
     setProcessing(null);
