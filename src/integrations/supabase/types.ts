@@ -1377,6 +1377,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_agreements: {
+        Row: {
+          accepted_at: string
+          agreement_type: string
+          created_at: string
+          id: string
+          ip_hint: string | null
+          signature_hash: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          agreement_type: string
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          signature_hash: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          agreement_type?: string
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          signature_hash?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
