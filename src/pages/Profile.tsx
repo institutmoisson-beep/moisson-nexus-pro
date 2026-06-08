@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Copy, Share2, Mail, Phone, MapPin, Award, Truck, Camera, ShieldCheck, IdCard, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+import ProfileDocuments from "@/components/profile/ProfileDocuments";
 
 const CAREER_LEVELS = [
   { key: "semeur", label: "Semeur", desc: "Inscription + achat pack", icon: "🌱" },
@@ -214,6 +215,8 @@ const ProfilePage = () => {
           })}
         </div>
       </div>
+
+      <ProfileDocuments user={{ id: user!.id, email: user!.email || profile.email }} profile={profile} />
 
 
       <div className="card-elevated mb-6">
