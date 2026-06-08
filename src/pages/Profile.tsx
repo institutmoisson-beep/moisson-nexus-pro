@@ -216,6 +216,8 @@ const ProfilePage = () => {
         </div>
       </div>
 
+      <ProfileDocuments user={{ id: user!.id, email: user!.email || profile.email }} profile={profile} />
+
 
       <div className="card-elevated mb-6">
         <h2 className="text-lg font-heading font-semibold text-foreground mb-4">🌱 Code Moissonneur</h2>
