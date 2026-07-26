@@ -1,0 +1,11 @@
+# Institut Moisson
+
+> Communauté solidaire des Moissonneurs : plateforme d'entraide, packs d'activation, réseau MLM binaire, fond communautaire et protection.
+
+Institut Moisson est une plateforme francophone rassemblant une communauté de Moissonneurs autour de valeurs de solidarité, de prospérité et de protection mutuelle. Elle propose des packs d'activation, un système de réseau binaire, un fond communautaire alimenté par les membres, et des outils de vérification d'identité.
+
+## Pages
+
+- [Accueil](/): Présentation de la communauté Institut Moisson.
+- [Inscription](/#/inscription): Devenir Moissonneur avec un code de parrainage.
+- [Connexion](/#/connexion): Espace membre.
