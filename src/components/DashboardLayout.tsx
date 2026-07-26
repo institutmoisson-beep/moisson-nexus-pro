@@ -95,7 +95,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             <button onClick={handleSignOut} className="p-2 rounded-lg text-muted-foreground hover:bg-secondary transition-colors" title="Déconnexion">
               <LogOut className="w-4 h-4" />
             </button>
-            <button onClick={() => setMobileMenu(!mobileMenu)} className="lg:hidden p-2 rounded-lg text-muted-foreground hover:bg-secondary">
+            <button onClick={() => setMobileMenu(!mobileMenu)} aria-label={mobileMenu ? "Fermer le menu" : "Ouvrir le menu"} aria-expanded={mobileMenu} className="lg:hidden p-2 rounded-lg text-muted-foreground hover:bg-secondary">
               {mobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
